@@ -12,7 +12,6 @@
 
 /* Constants required for hardware setup.  The tick ISR runs off the ACLK,
 not the MCLK. */
-#define portACLK_FREQUENCY_HZ			( ( TickType_t ) 32768 )
 #define portINITIAL_CRITICAL_NESTING	( ( uint16_t ) 10 )
 #define portFLAGS_INT_ENABLED			( ( StackType_t ) 0x08 )
 
@@ -38,6 +37,21 @@ volatile uint16_t usCriticalNesting = portINITIAL_CRITICAL_NESTING;
  * could have alternatively used the watchdog timer or timer 1.
  */
 void vPortSetupTimerInterrupt( void );
+
+/*-----------------------------------------------------------*/
+/*
+ * Placeholders for functions which will be implemented in ASM file.
+ */
+void portRESTORE_CONTEXT(void)
+{
+
+}
+
+void portSAVE_CONTEXT(void)
+{
+
+}
+
 /*-----------------------------------------------------------*/
 
 /*
@@ -63,7 +77,7 @@ uint32_t *pulTopOfStack, ulTemp;
 		pxTopOfStack--;
 	*/
 
-	/* Data types are need either 16 bits or 32 bits depending on the data 
+	/* Data types are need either 16 bits or 32 bits depending on the data
 	and code model used. */
 	if( sizeof( pxCode ) == sizeof( uint16_t ) )
 	{
@@ -74,7 +88,7 @@ uint32_t *pulTopOfStack, ulTemp;
 	else
 	{
 		/* Make room for a 20 bit value stored as a 32 bit value. */
-		pusTopOfStack = ( uint16_t * ) pxTopOfStack;		
+		pusTopOfStack = ( uint16_t * ) pxTopOfStack;
 		pusTopOfStack--;
 		pulTopOfStack = ( uint32_t * ) pusTopOfStack;
 		*pulTopOfStack = ( uint32_t ) pxCode;
@@ -83,7 +97,7 @@ uint32_t *pulTopOfStack, ulTemp;
 	pusTopOfStack--;
 	*pusTopOfStack = portFLAGS_INT_ENABLED;
 	pusTopOfStack -= ( sizeof( StackType_t ) / 2 );
-	
+
 	/* From here on the size of stacked items depends on the memory model. */
 	pxTopOfStack = ( StackType_t * ) pusTopOfStack;
 
@@ -104,7 +118,7 @@ uint32_t *pulTopOfStack, ulTemp;
 		*pxTopOfStack = ( StackType_t ) 0x9999;
 		pxTopOfStack--;
 		*pxTopOfStack = ( StackType_t ) 0x8888;
-		pxTopOfStack--;	
+		pxTopOfStack--;
 		*pxTopOfStack = ( StackType_t ) 0x5555;
 		pxTopOfStack--;
 		*pxTopOfStack = ( StackType_t ) 0x6666;
@@ -122,7 +136,7 @@ uint32_t *pulTopOfStack, ulTemp;
 	/* A variable is used to keep track of the critical section nesting.
 	This variable has to be stored as part of the task context and is
 	initially set to zero. */
-	*pxTopOfStack = ( StackType_t ) portNO_CRITICAL_SECTION_NESTING;	
+	*pxTopOfStack = ( StackType_t ) portNO_CRITICAL_SECTION_NESTING;
 
 	/* Return a pointer to the top of the stack we have generated so this can
 	be stored in the task control block for the task. */
@@ -135,15 +149,47 @@ void vPortEndScheduler( void )
 	/* It is unlikely that the MSP430 port will get stopped.  If required simply
 	disable the tick interrupt here. */
 }
-/*-----------------------------------------------------------*/
 
+/*-----------------------------------------------------------*/
 /*
- * Hardware initialisation to generate the RTOS tick.
+ * See header file for description.
  */
-void vPortSetupTimerInterrupt( void )
+BaseType_t xPortStartScheduler(void)
 {
+	/* Start the timer that generates the tick ISR. */
 	vApplicationSetupTimerInterrupt();
+	usCriticalNesting = 0;
+	portRESTORE_CONTEXT();
+
+	/* Should not get here! */
+	return pdFAIL;
 }
+
+/*-----------------------------------------------------------*/
+void vPortYield( void )
+{
+	portSAVE_CONTEXT();
+	vTaskSwitchContext();
+	portRESTORE_CONTEXT();
+}
+
+/*-----------------------------------------------------------*/
+void vPortPreemptiveTickISR( void )
+{
+	portSAVE_CONTEXT();
+	xTaskIncrementTick();
+	vTaskSwitchContext();
+	portRESTORE_CONTEXT();
+}
+
+/*-----------------------------------------------------------*/
+void vPortCooperativeTickISR( void )
+{
+	portSAVE_CONTEXT();
+	xTaskIncrementTick();
+	portRESTORE_CONTEXT();
+}
+
 /*-----------------------------------------------------------*/
 interrupt void vTickISREntry( void )
 {
@@ -155,5 +201,3 @@ interrupt void vTickISREntry( void )
 		vPortCooperativeTickISR();
 	#endif
 }
-
-	
