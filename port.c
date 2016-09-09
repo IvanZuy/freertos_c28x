@@ -7,6 +7,7 @@
 //-------------------------------------------------------------------------------------------------
 #include "FreeRTOS.h"
 #include "task.h"
+#include "F28x_Project.h"
 
 //-------------------------------------------------------------------------------------------------
 // Implementation of functions defined in portable.h for the C28x port.
@@ -30,6 +31,7 @@ extern volatile TCB_t * volatile pxCurrentTCB;
 // not be initialised to zero as this will cause problems during the startup
 // sequence.
 volatile uint16_t usCriticalNesting = portINITIAL_CRITICAL_NESTING;
+volatile uint16_t bFirstStart = 1;
 
 //-------------------------------------------------------------------------------------------------
 // Initialise the stack of a task to look exactly as if 
@@ -37,6 +39,8 @@ volatile uint16_t usCriticalNesting = portINITIAL_CRITICAL_NESTING;
 //-------------------------------------------------------------------------------------------------
 StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t pxCode, void *pvParameters )
 {
+  uint16_t i;
+
   pxTopOfStack[0]  = 0x0089;  // ST0
   pxTopOfStack[1]  = 0x0000;  // T
   pxTopOfStack[2]  = ((uint32_t)pvParameters) & 0xFFFFU;       // AL
@@ -47,12 +51,21 @@ StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t px
   pxTopOfStack[7]  = 0xFFFF;  // AR1
   pxTopOfStack[8]  = 0x8A0A;  // ST1
   pxTopOfStack[9]  = 0x0000;  // DP
-  pxTopOfStack[10] = 0x0000;  // IER
+  pxTopOfStack[10] = 0x2000;  // IER, Enable Timer2 interrupt(INT14)
   pxTopOfStack[11] = 0x0000;  // DBGSTAT
   pxTopOfStack[12] = ((uint32_t)pxCode) & 0xFFFFU;       // PCL
   pxTopOfStack[13] = ((uint32_t)pxCode >> 16) & 0x00FFU; // PCH
+  pxTopOfStack[14] = 0xAAAA;  // Alignment
 
-  pxTopOfStack += 15;
+  // Fill the rest of the registers with dummy values.
+  for(i = 15; i < (15 + 24); i++)
+  {
+    pxTopOfStack[i] = 0xBBBB;
+    i++;
+    pxTopOfStack[i] = 0xCCCC;
+  }
+
+  pxTopOfStack += 40;
 
   // Return a pointer to the top of the stack we have generated so this can
   // be stored in the task control block for the task.
@@ -74,7 +87,7 @@ BaseType_t xPortStartScheduler(void)
   // Start the timer that restore context to switch into first task.
   vApplicationSetupTimerInterrupt();
   usCriticalNesting = 0;
-  portRESTORE_CONTEXT();
+  __asm(" INTR INT14");
 
   // Should not get here!
   return pdFAIL;
@@ -83,22 +96,34 @@ BaseType_t xPortStartScheduler(void)
 //-------------------------------------------------------------------------------------------------
 void vPortYield( void )
 {
-  portSAVE_CONTEXT();
-  vTaskSwitchContext();
-  portRESTORE_CONTEXT();
+  __asm(" INTR INT14");
 }
 
 //-------------------------------------------------------------------------------------------------
 interrupt void vTickISREntry( void )
 {
-  #if configUSE_PREEMPTION == 1
+#if configUSE_PREEMPTION == 1
+  // First context switch don't need context save
+  // since it's executed in main() context and will
+  // never return there.
+  if(bFirstStart == 0)
+  {
     portSAVE_CONTEXT();
+  }
+  bFirstStart = 0;
+
+  // Increment tick counter only for timer triggered context switches.
+  if(CpuTimer2Regs.TCR.bit.TIF == 1)
+  {
     xTaskIncrementTick();
-    vTaskSwitchContext();
-    portRESTORE_CONTEXT();
-  #else
-    portSAVE_CONTEXT();
-    xTaskIncrementTick();
-    portRESTORE_CONTEXT();
-  #endif
+  }
+  CpuTimer2Regs.TCR.bit.TIF = 1;
+
+  vTaskSwitchContext();
+  portRESTORE_CONTEXT();
+#else
+  portSAVE_CONTEXT();
+  xTaskIncrementTick();
+  portRESTORE_CONTEXT();
+#endif
 }
