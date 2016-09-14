@@ -25,7 +25,8 @@
 //-------------------------------------------------------------------------------------------------
 #include "FreeRTOS.h"
 #include "task.h"
-#include "F28x_Project.h"
+//#include "F28x_Project.h"
+#include "DSP28x_Project.h"
 
 //-------------------------------------------------------------------------------------------------
 // Implementation of functions defined in portable.h for the C28x port.
@@ -34,6 +35,11 @@
 // Constants required for hardware setup.
 #define portINITIAL_CRITICAL_NESTING  ( ( uint16_t ) 10 )
 #define portFLAGS_INT_ENABLED         ( ( StackType_t ) 0x08 )
+#if (C28X_PORT_FPU_SUPPORT == 1)
+# define AUX_REGISTERS_TO_SAVE        12 // XAR + FPU registers
+#else
+# define AUX_REGISTERS_TO_SAVE        6  // XAR registers only
+#endif
 
 // We require the address of the pxCurrentTCB variable, but don't want to know
 // any details of its type.
@@ -76,14 +82,13 @@ StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t px
   pxTopOfStack[14] = 0xAAAA;  // Alignment
 
   // Fill the rest of the registers with dummy values.
-  for(i = 15; i < (15 + 24); i++)
+  for(i = 15; i < (15 + (2 * AUX_REGISTERS_TO_SAVE)); i++)
   {
     pxTopOfStack[i] = 0x0000;
     i++;
     pxTopOfStack[i] = 0x0000;
   }
-
-  pxTopOfStack += 40;
+  pxTopOfStack += 16 + (2 * AUX_REGISTERS_TO_SAVE);
 
   // Return a pointer to the top of the stack we have generated so this can
   // be stored in the task control block for the task.
@@ -104,7 +109,8 @@ BaseType_t xPortStartScheduler(void)
 {
   // Start the timer than activate timer interrupt to switch into first task.
   EALLOW;
-  PieVectTable.TIMER2_INT = &vTickISREntry;
+//  PieVectTable.TIMER2_INT = &vTickISREntry;
+  PieVectTable.TINT2 = &vTickISREntry;
   EDIS;
 
   ConfigCpuTimer(&CpuTimer2,
