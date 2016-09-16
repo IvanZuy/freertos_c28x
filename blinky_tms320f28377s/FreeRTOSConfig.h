@@ -40,8 +40,5 @@
 #define INCLUDE_vTaskDelayUntil             0
 #define INCLUDE_vTaskDelay                  1
 
-#define C28X_PORT_FPU_SUPPORT               1
-
-
 #endif /* FREERTOS_CONFIG_H */
 
