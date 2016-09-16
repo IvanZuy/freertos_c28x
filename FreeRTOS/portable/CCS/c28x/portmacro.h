@@ -113,6 +113,7 @@ extern void portSAVE_CONTEXT( void );
 extern void portRESTORE_CONTEXT( void );
 extern interrupt void vTickISREntry( void );
 extern void vTaskSwitchContext( void );
+extern interrupt void vTickISREntry( void );
 
 //-------------------------------------------------------------------------------------------------
 // Hardware specifics.

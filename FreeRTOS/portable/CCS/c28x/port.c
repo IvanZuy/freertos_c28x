@@ -25,8 +25,6 @@
 //-------------------------------------------------------------------------------------------------
 #include "FreeRTOS.h"
 #include "task.h"
-//#include "F28x_Project.h"
-#include "DSP28x_Project.h"
 
 //-------------------------------------------------------------------------------------------------
 // Implementation of functions defined in portable.h for the C28x port.
@@ -35,7 +33,7 @@
 // Constants required for hardware setup.
 #define portINITIAL_CRITICAL_NESTING  ( ( uint16_t ) 10 )
 #define portFLAGS_INT_ENABLED         ( ( StackType_t ) 0x08 )
-#if (C28X_PORT_FPU_SUPPORT == 1)
+#if defined(__TMS320C28XX_FPU32__)
 # define AUX_REGISTERS_TO_SAVE        12 // XAR + FPU registers
 #else
 # define AUX_REGISTERS_TO_SAVE        6  // XAR registers only
@@ -45,6 +43,8 @@
 // any details of its type.
 typedef void TCB_t;
 extern volatile TCB_t * volatile pxCurrentTCB;
+
+extern void vApplicationSetupTimerInterrupt( void );
 
 // Each task maintains a count of the critical section nesting depth.  Each
 // time a critical section is entered the count is incremented.  Each time a
@@ -56,6 +56,7 @@ extern volatile TCB_t * volatile pxCurrentTCB;
 // sequence.
 volatile uint16_t usCriticalNesting = portINITIAL_CRITICAL_NESTING;
 volatile uint16_t bFirstStart = 1;
+volatile uint16_t bYield = 0;
 
 //-------------------------------------------------------------------------------------------------
 // Initialise the stack of a task to look exactly as if
@@ -75,7 +76,7 @@ StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t px
   pxTopOfStack[7]  = 0xFFFF;  // AR1
   pxTopOfStack[8]  = 0x8A0A;  // ST1
   pxTopOfStack[9]  = 0x0000;  // DP
-  pxTopOfStack[10] = M_INT14; // IER, Enable Timer2 interrupt(INT14)
+  pxTopOfStack[10] = 0x2000; // IER, Enable Timer2 interrupt(INT14)
   pxTopOfStack[11] = 0x0000;  // DBGSTAT
   pxTopOfStack[12] = ((uint32_t)pxCode) & 0xFFFFU;       // PCL
   pxTopOfStack[13] = ((uint32_t)pxCode >> 16) & 0x00FFU; // PCH
@@ -107,16 +108,7 @@ void vPortEndScheduler( void )
 //-------------------------------------------------------------------------------------------------
 BaseType_t xPortStartScheduler(void)
 {
-  // Start the timer than activate timer interrupt to switch into first task.
-  EALLOW;
-//  PieVectTable.TIMER2_INT = &vTickISREntry;
-  PieVectTable.TINT2 = &vTickISREntry;
-  EDIS;
-
-  ConfigCpuTimer(&CpuTimer2,
-                 configCPU_CLOCK_HZ / 1000000,  // CPU clock in MHz
-                 1000000 / configTICK_RATE_HZ); // Timer period in uS
-  CpuTimer2Regs.TCR.all = 0x4000;               // Enable interrupt and start timer
+  vApplicationSetupTimerInterrupt();
 
   usCriticalNesting = 0;
   __asm(" INTR INT14");
@@ -129,6 +121,7 @@ BaseType_t xPortStartScheduler(void)
 void vPortYield( void )
 {
   // Activate timer interrupt to switch context.
+  bYield = 1;
   __asm(" INTR INT14");
 }
 
@@ -146,11 +139,11 @@ interrupt void vTickISREntry( void )
   bFirstStart = 0;
 
   // Increment tick counter only for timer triggered context switches.
-  if(CpuTimer2Regs.TCR.bit.TIF == 1)
+  if(bYield == 0)
   {
     xTaskIncrementTick();
   }
-  CpuTimer2Regs.TCR.bit.TIF = 1;
+  bYield = 0;
 
   vTaskSwitchContext();
   portRESTORE_CONTEXT();
