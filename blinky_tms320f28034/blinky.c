@@ -1,24 +1,9 @@
-//###########################################################################
-// FILE:   blinky_cpu01.c
-// TITLE:  LED Blink Example for F2837xS.
-//
-//! \addtogroup cpu01_example_list
-//! <h1> Blinky </h1>
-//!
-//! This example blinks LED X
-//
-//###########################################################################
-// $TI Release: F2837xS Support Library v191 $
-// $Release Date: Fri Mar 11 15:58:35 CST 2016 $
-// $Copyright: Copyright (C) 2014-2016 Texas Instruments Incorporated -
-//             http://www.ti.com/ ALL RIGHTS RESERVED $
-//###########################################################################
-
 #include "DSP28x_Project.h"     // Device Headerfile and Examples Include File
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
 
-#define STACK_SIZE 	128U
+#define STACK_SIZE 	64U
 
 static StaticTask_t redTaskBuffer;
 static StackType_t  redTaskStack[STACK_SIZE];
@@ -29,14 +14,8 @@ static StackType_t  blueTaskStack[STACK_SIZE];
 static StaticTask_t idleTaskBuffer;
 static StackType_t  idleTaskStack[STACK_SIZE];
 
-//-------------------------------------------------------------------------------------------------
-void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName )
-{
-	for(;;)
-	{
-
-	}
-}
+static SemaphoreHandle_t xSemaphore = NULL;
+static StaticSemaphore_t xSemaphoreBuffer;
 
 //-------------------------------------------------------------------------------------------------
 void vApplicationSetupTimerInterrupt( void )
@@ -53,22 +32,49 @@ void vApplicationSetupTimerInterrupt( void )
 }
 
 //-------------------------------------------------------------------------------------------------
+interrupt void timer1_ISR( void )
+{
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+	xSemaphoreGiveFromISR( xSemaphore, &xHigherPriorityTaskWoken );
+	portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+}
+
+//-------------------------------------------------------------------------------------------------
+static void setupTimer1( void )
+{
+	// Start the timer than activate timer interrupt to switch into first task.
+	EALLOW;
+	PieVectTable.TINT1 = &timer1_ISR;
+	EDIS;
+
+	ConfigCpuTimer(&CpuTimer1,
+	               configCPU_CLOCK_HZ / 1000000,  // CPU clock in MHz
+	               100); 						  // Timer period in uS
+	CpuTimer1Regs.TCR.all = 0x4000;               // Enable interrupt and start timer
+
+	IER |= M_INT13;
+}
+
+//-------------------------------------------------------------------------------------------------
 void LED_TaskRed(void * pvParameters)
 {
-	uint32_t counter = 0;
+	static uint32_t counter = 0;
 
 	for(;;)
 	{
-		counter++;
-		if(counter & 1)
+		if(xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE)
 		{
-			GpioDataRegs.GPACLEAR.bit.GPIO1 = 1;
+			counter++;
+			if(counter & 1)
+			{
+				GpioDataRegs.GPACLEAR.bit.GPIO1 = 1;
+			}
+			else
+			{
+				GpioDataRegs.GPASET.bit.GPIO1 = 1;
+			}
 		}
-		else
-		{
-			GpioDataRegs.GPASET.bit.GPIO1 = 1;
-		}
-		vTaskDelay(250 / portTICK_PERIOD_MS);
 	}
 }
 
@@ -129,13 +135,6 @@ void main(void)
     GpioDataRegs.GPACLEAR.bit.GPIO23 = 1;
     EDIS;
 
-//    GPIO_SetupPinMux(12, GPIO_MUX_CPU1, 0);
-//    GPIO_SetupPinMux(13, GPIO_MUX_CPU1, 0);
-//    GPIO_SetupPinOptions(12, GPIO_OUTPUT, GPIO_PUSHPULL);
-//    GPIO_SetupPinOptions(13, GPIO_OUTPUT, GPIO_PUSHPULL);
-//    GPIO_WritePin(12, 1);
-//    GPIO_WritePin(13, 1);
-
 	// Step 3. Clear all interrupts and initialize PIE vector table:
 	// Disable CPU interrupts
     DINT;
@@ -163,6 +162,10 @@ void main(void)
     // Enable global Interrupts and higher priority real-time debug events:
     EINT;  // Enable Global interrupt INTM
     ERTM;  // Enable Global realtime interrupt DBGM
+
+    setupTimer1();
+
+    xSemaphore = xSemaphoreCreateBinaryStatic( &xSemaphoreBuffer );
 
     // Create the task without using any dynamic memory allocation.
     xTaskCreateStatic(LED_TaskRed,     		// Function that implements the task.

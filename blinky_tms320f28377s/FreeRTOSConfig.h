@@ -25,7 +25,7 @@
 #define configUSE_TRACE_FACILITY            0
 #define configUSE_16_BIT_TICKS              0
 #define configIDLE_SHOULD_YIELD             0
-#define configCHECK_FOR_STACK_OVERFLOW      2
+#define configCHECK_FOR_STACK_OVERFLOW      0
 #define configSUPPORT_STATIC_ALLOCATION     1
 #define configSUPPORT_DYNAMIC_ALLOCATION    0
 

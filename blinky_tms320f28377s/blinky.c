@@ -1,22 +1,7 @@
-//###########################################################################
-// FILE:   blinky_cpu01.c
-// TITLE:  LED Blink Example for F2837xS.
-//
-//! \addtogroup cpu01_example_list
-//! <h1> Blinky </h1>
-//!
-//! This example blinks LED X
-//
-//###########################################################################
-// $TI Release: F2837xS Support Library v191 $
-// $Release Date: Fri Mar 11 15:58:35 CST 2016 $
-// $Copyright: Copyright (C) 2014-2016 Texas Instruments Incorporated -
-//             http://www.ti.com/ ALL RIGHTS RESERVED $
-//###########################################################################
-
 #include "F28x_Project.h"     // Device Headerfile and Examples Include File
 #include "FreeRTOS.h"
 #include "task.h"
+#include "semphr.h"
 
 #define STACK_SIZE 	128U
 
@@ -29,14 +14,8 @@ static StackType_t  blueTaskStack[STACK_SIZE];
 static StaticTask_t idleTaskBuffer;
 static StackType_t  idleTaskStack[STACK_SIZE];
 
-//-------------------------------------------------------------------------------------------------
-void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName )
-{
-	for(;;)
-	{
-
-	}
-}
+static SemaphoreHandle_t xSemaphore = NULL;
+static StaticSemaphore_t xSemaphoreBuffer;
 
 //-------------------------------------------------------------------------------------------------
 void vApplicationSetupTimerInterrupt( void )
@@ -53,15 +32,42 @@ void vApplicationSetupTimerInterrupt( void )
 }
 
 //-------------------------------------------------------------------------------------------------
+interrupt void timer1_ISR( void )
+{
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+	xSemaphoreGiveFromISR( xSemaphore, &xHigherPriorityTaskWoken );
+	portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+}
+
+//-------------------------------------------------------------------------------------------------
+static void setupTimer1( void )
+{
+	// Start the timer than activate timer interrupt to switch into first task.
+	EALLOW;
+	PieVectTable.TIMER1_INT = &timer1_ISR;
+	EDIS;
+
+	ConfigCpuTimer(&CpuTimer1,
+	               configCPU_CLOCK_HZ / 1000000,  // CPU clock in MHz
+	               100); 						  // Timer period in uS
+	CpuTimer1Regs.TCR.all = 0x4000;               // Enable interrupt and start timer
+
+	IER |= M_INT13;
+}
+
+//-------------------------------------------------------------------------------------------------
 void LED_TaskRed(void * pvParameters)
 {
 	uint32_t counter = 0;
 
 	for(;;)
 	{
-		counter++;
-		GPIO_WritePin(12, counter & 1);
-		vTaskDelay(250 / portTICK_PERIOD_MS);
+		if(xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE)
+		{
+			counter++;
+			GPIO_WritePin(12, counter & 1);
+		}
 	}
 }
 
@@ -129,6 +135,10 @@ void main(void)
 	// The shell ISR routines are found in F2837xS_DefaultIsr.c.
 	// This function is found in F2837xS_PieVect.c.
     InitPieVectTable();
+
+    setupTimer1();
+
+    xSemaphore = xSemaphoreCreateBinaryStatic( &xSemaphoreBuffer );
 
     // Enable global Interrupts and higher priority real-time debug events:
     EINT;  // Enable Global interrupt INTM

@@ -57,6 +57,7 @@ extern void vApplicationSetupTimerInterrupt( void );
 volatile uint16_t usCriticalNesting = portINITIAL_CRITICAL_NESTING;
 volatile uint16_t bFirstStart = 1;
 volatile uint16_t bYield = 0;
+volatile uint16_t cpuIER = 0;
 
 //-------------------------------------------------------------------------------------------------
 // Initialise the stack of a task to look exactly as if
@@ -76,7 +77,7 @@ StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t px
   pxTopOfStack[7]  = 0xFFFF;  // AR1
   pxTopOfStack[8]  = 0x8A0A;  // ST1
   pxTopOfStack[9]  = 0x0000;  // DP
-  pxTopOfStack[10] = 0x2000; // IER, Enable Timer2 interrupt(INT14)
+  pxTopOfStack[10] = 0x0000;  // IER
   pxTopOfStack[11] = 0x0000;  // DBGSTAT
   pxTopOfStack[12] = ((uint32_t)pxCode) & 0xFFFFU;       // PCL
   pxTopOfStack[13] = ((uint32_t)pxCode >> 16) & 0x00FFU; // PCH
@@ -136,6 +137,8 @@ interrupt void vTickISREntry( void )
   {
     portSAVE_CONTEXT();
   }
+  portSAVE_IER();
+  cpuIER |= 0x2000; // Keep Timer2 interrupt(INT14) enabled
   bFirstStart = 0;
 
   // Increment tick counter only for timer triggered context switches.
@@ -147,6 +150,12 @@ interrupt void vTickISREntry( void )
 
   vTaskSwitchContext();
   portRESTORE_CONTEXT();
+
+#if defined(__TMS320C28XX_FPU32__)
+  portRESTORE_IER_FPU32();
+#else
+  portRESTORE_IER_NOFPU();
+#endif
 #else
   portSAVE_CONTEXT();
   xTaskIncrementTick();
