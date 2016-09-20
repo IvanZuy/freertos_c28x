@@ -67,7 +67,7 @@ StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t px
 {
   uint16_t i;
 
-  pxTopOfStack[0]  = 0x0089;  // ST0
+  pxTopOfStack[0]  = 0x0080;  // ST0. PSM = 0(No shift)
   pxTopOfStack[1]  = 0x0000;  // T
   pxTopOfStack[2]  = ((uint32_t)pvParameters) & 0xFFFFU;       // AL
   pxTopOfStack[3]  = ((uint32_t)pvParameters >> 16) & 0x00FFU; // AH
@@ -75,7 +75,7 @@ StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t px
   pxTopOfStack[5]  = 0xFFFF;  // PH
   pxTopOfStack[6]  = 0xFFFF;  // AR0
   pxTopOfStack[7]  = 0xFFFF;  // AR1
-  pxTopOfStack[8]  = 0x8A0A;  // ST1
+  pxTopOfStack[8]  = 0x8A08;  // ST1
   pxTopOfStack[9]  = 0x0000;  // DP
   pxTopOfStack[10] = 0x0000;  // IER
   pxTopOfStack[11] = 0x0000;  // DBGSTAT
