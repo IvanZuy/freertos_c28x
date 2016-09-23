@@ -55,9 +55,9 @@ extern void vApplicationSetupTimerInterrupt( void );
 // not be initialised to zero as this will cause problems during the startup
 // sequence.
 volatile uint16_t usCriticalNesting = portINITIAL_CRITICAL_NESTING;
-volatile uint16_t bFirstStart = 1;
 volatile uint16_t bYield = 0;
 volatile uint16_t cpuIER = 0;
+volatile StackType_t *pMainContextSP;
 
 //-------------------------------------------------------------------------------------------------
 // Initialise the stack of a task to look exactly as if
@@ -112,6 +112,11 @@ BaseType_t xPortStartScheduler(void)
   vApplicationSetupTimerInterrupt();
 
   usCriticalNesting = 0;
+
+  // At first start pxCurrentTCB is not defined.
+  // Since context switch uses first member only to save SP,
+  // we can simply use local variable to save stack pointer.
+  pxCurrentTCB = pMainContextSP;
   __asm(" INTR INT14");
 
   // Should not get here!
@@ -130,16 +135,10 @@ void vPortYield( void )
 interrupt void vTickISREntry( void )
 {
 #if configUSE_PREEMPTION == 1
-  // First context switch don't need context save
-  // since it's executed in main() context and will
-  // never return there.
-  if(bFirstStart == 0)
-  {
-    portSAVE_CONTEXT();
-  }
+
+  portSAVE_CONTEXT();
   portSAVE_IER();
   cpuIER |= 0x2000; // Keep Timer2 interrupt(INT14) enabled
-  bFirstStart = 0;
 
   // Increment tick counter only for timer triggered context switches.
   if(bYield == 0)
@@ -156,9 +155,12 @@ interrupt void vTickISREntry( void )
 #else
   portRESTORE_IER_NOFPU();
 #endif
+
 #else
+
   portSAVE_CONTEXT();
   xTaskIncrementTick();
   portRESTORE_CONTEXT();
+
 #endif
 }
