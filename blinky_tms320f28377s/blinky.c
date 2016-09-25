@@ -67,7 +67,7 @@ void LED_TaskRed(void * pvParameters)
 		{
 			counter++;
 			GPIO_WritePin(12, counter & 1);
-			vTaskDelay(250 / portTICK_PERIOD_MS);
+			vTaskDelay(10 / portTICK_PERIOD_MS);
 		}
 	}
 }
@@ -81,7 +81,7 @@ void LED_TaskBlue(void * pvParameters)
 	{
 		counter++;
 		GPIO_WritePin(13, counter & 1);
-		vTaskDelay(500 / portTICK_PERIOD_MS);
+		vTaskDelay(50 / portTICK_PERIOD_MS);
 	}
 }
 

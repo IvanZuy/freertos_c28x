@@ -22,6 +22,7 @@
 
   .ref _pxCurrentTCB
   .ref _cpuIER
+  .ref _bYield
   .ref _xTaskIncrementTick
   .ref _vTaskSwitchContext
 
@@ -83,7 +84,15 @@ _portTICK_ISR:
 
   LCR     _portSAVE_CONTEXT
   LCR     _portSAVE_IER
+
+  MOVL    XAR0, #_bYield
+  MOV     ACC, *XAR0
+  SB      RESET_YIELD_FLAG, NEQ
   LCR     _xTaskIncrementTick
+
+RESET_YIELD_FLAG:
+  MOV     ACC, #0
+  MOV     *XAR0, ACC
   LCR     _vTaskSwitchContext
   LCR     _portRESTORE_CONTEXT
   LCR     _portRESTORE_IER_FPU32
