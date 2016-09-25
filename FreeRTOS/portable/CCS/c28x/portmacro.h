@@ -106,7 +106,10 @@ extern volatile uint16_t usCriticalNesting;                                 \
 // Task utilities.
 //-------------------------------------------------------------------------------------------------
 #define portYIELD() vPortYield()
-#define portYIELD_FROM_ISR( x )
+#define portYIELD_FROM_ISR( x ) if(x != pdFALSE){ portSAVE_CONTEXT(); \
+	                                              portSAVE_IER(); \
+	                                              vTaskSwitchContext(); \
+	                                              portRESTORE_CONTEXT();}
 
 extern void vPortYield( void );
 extern void portSAVE_CONTEXT( void );
@@ -114,6 +117,7 @@ extern void portRESTORE_CONTEXT( void );
 extern void portSAVE_IER( void );
 extern void portRESTORE_IER_NOFPU( void );
 extern void portRESTORE_IER_FPU32( void );
+extern void portTICK_ISR( void );
 extern interrupt void vTickISREntry( void );
 extern void vTaskSwitchContext( void );
 extern interrupt void vTickISREntry( void );

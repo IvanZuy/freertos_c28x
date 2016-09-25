@@ -22,11 +22,15 @@
 
   .ref _pxCurrentTCB
   .ref _cpuIER
+  .ref _xTaskIncrementTick
+  .ref _vTaskSwitchContext
+
   .def _portSAVE_CONTEXT
   .def _portRESTORE_CONTEXT
   .def _portSAVE_IER
   .def _portRESTORE_IER_NOFPU
   .def _portRESTORE_IER_FPU32
+  .def _portTICK_ISR
 
 _portSAVE_CONTEXT:
   MOVL    XAR0, #_pxCurrentTCB
@@ -46,6 +50,7 @@ _portRESTORE_CONTEXT:
 
 _portSAVE_IER:
   MOVL    XAR0, #_cpuIER
+  OR      IER, #0x2000
   MOV     *XAR0, IER
   LRETR
 
@@ -60,3 +65,40 @@ _portRESTORE_IER_FPU32:
   MOV     AR6, *XAR0
   MOV     *-SP[32], AR6
   LRETR
+
+_portTICK_ISR:
+  ASP          
+  PUSH    RB
+  PUSH    AR1H:AR0H
+  MOVL    *SP++, XT
+  MOVL    *SP++, XAR4
+  MOVL    *SP++, XAR5
+  MOVL    *SP++, XAR6
+  MOVL    *SP++, XAR7
+  MOV32   *SP++, STF
+  MOV32   *SP++, R0H
+  MOV32   *SP++, R1H
+  MOV32   *SP++, R2H
+  MOV32   *SP++, R3H
+
+  LCR     _portSAVE_CONTEXT
+  LCR     _portSAVE_IER
+  LCR     _xTaskIncrementTick
+  LCR     _vTaskSwitchContext
+  LCR     _portRESTORE_CONTEXT
+  LCR     _portRESTORE_IER_FPU32
+
+  MOV32   R3H, *--SP
+  MOV32   R2H, *--SP
+  MOV32   R1H, *--SP
+  MOV32   R0H, *--SP
+  MOV32   STF, *--SP
+  MOVL    XAR7, *--SP
+  MOVL    XAR6, *--SP
+  MOVL    XAR5, *--SP
+  MOVL    XAR4, *--SP
+  MOVL    XT, *--SP
+  POP     AR1H:AR0H
+  POP     RB
+  NASP 
+  IRET

@@ -22,7 +22,7 @@ void vApplicationSetupTimerInterrupt( void )
 {
 	// Start the timer than activate timer interrupt to switch into first task.
 	EALLOW;
-	PieVectTable.TIMER2_INT = &vTickISREntry;
+	PieVectTable.TIMER2_INT = &portTICK_ISR;
 	EDIS;
 
 	ConfigCpuTimer(&CpuTimer2,
@@ -37,7 +37,7 @@ interrupt void timer1_ISR( void )
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
 	xSemaphoreGiveFromISR( xSemaphore, &xHigherPriorityTaskWoken );
-	portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+	portYIELD_FROM_ISR( pdTRUE );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -63,10 +63,11 @@ void LED_TaskRed(void * pvParameters)
 
 	for(;;)
 	{
-		if(xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE)
+//		if(xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE)
 		{
 			counter++;
 			GPIO_WritePin(12, counter & 1);
+			vTaskDelay(250 / portTICK_PERIOD_MS);
 		}
 	}
 }
@@ -136,7 +137,7 @@ void main(void)
 	// This function is found in F2837xS_PieVect.c.
     InitPieVectTable();
 
-    setupTimer1();
+//    setupTimer1();
 
     xSemaphore = xSemaphoreCreateBinaryStatic( &xSemaphoreBuffer );
 

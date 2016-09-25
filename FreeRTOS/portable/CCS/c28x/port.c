@@ -118,6 +118,7 @@ BaseType_t xPortStartScheduler(void)
   // we can simply use local variable to save stack pointer.
   pxCurrentTCB = pMainContextSP;
   __asm(" INTR INT14");
+//  while(1);
 
   // Should not get here!
   return pdFAIL;
