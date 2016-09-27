@@ -34,9 +34,9 @@
 #define portINITIAL_CRITICAL_NESTING  ( ( uint16_t ) 10 )
 #define portFLAGS_INT_ENABLED         ( ( StackType_t ) 0x08 )
 #if defined(__TMS320C28XX_FPU32__)
-# define AUX_REGISTERS_TO_SAVE        12 // XAR + FPU registers
+# define AUX_REGISTERS_TO_SAVE        18 // XAR + FPU registers
 #else
-# define AUX_REGISTERS_TO_SAVE        6  // XAR registers only
+# define AUX_REGISTERS_TO_SAVE        8  // XAR registers only
 #endif
 
 // We require the address of the pxCurrentTCB variable, but don't want to know
@@ -130,38 +130,4 @@ void vPortYield( void )
   // Activate timer interrupt to switch context.
   bYield = 1;
   __asm(" INTR INT14");
-}
-
-//-------------------------------------------------------------------------------------------------
-interrupt void vTickISREntry( void )
-{
-#if configUSE_PREEMPTION == 1
-
-  portSAVE_CONTEXT();
-  portSAVE_IER();
-  cpuIER |= 0x2000; // Keep Timer2 interrupt(INT14) enabled
-
-  // Increment tick counter only for timer triggered context switches.
-  if(bYield == 0)
-  {
-    xTaskIncrementTick();
-  }
-  bYield = 0;
-
-  vTaskSwitchContext();
-  portRESTORE_CONTEXT();
-
-#if defined(__TMS320C28XX_FPU32__)
-  portRESTORE_IER_FPU32();
-#else
-  portRESTORE_IER_NOFPU();
-#endif
-
-#else
-
-  portSAVE_CONTEXT();
-  xTaskIncrementTick();
-  portRESTORE_CONTEXT();
-
-#endif
 }

@@ -18,6 +18,12 @@ static SemaphoreHandle_t xSemaphore = NULL;
 static StaticSemaphore_t xSemaphoreBuffer;
 
 //-------------------------------------------------------------------------------------------------
+void vApplicationStackOverflowHook( TaskHandle_t xTask, signed char *pcTaskName )
+{
+	while(1);
+}
+
+//-------------------------------------------------------------------------------------------------
 void vApplicationSetupTimerInterrupt( void )
 {
 	// Start the timer than activate timer interrupt to switch into first task.
@@ -60,6 +66,8 @@ static void setupTimer1( void )
 void LED_TaskRed(void * pvParameters)
 {
 	uint32_t counter = 0;
+
+//    setupTimer1();
 
 	for(;;)
 	{
@@ -136,8 +144,6 @@ void main(void)
 	// The shell ISR routines are found in F2837xS_DefaultIsr.c.
 	// This function is found in F2837xS_PieVect.c.
     InitPieVectTable();
-
-//    setupTimer1();
 
     xSemaphore = xSemaphoreCreateBinaryStatic( &xSemaphoreBuffer );
 

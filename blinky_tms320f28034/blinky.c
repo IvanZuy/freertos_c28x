@@ -22,7 +22,7 @@ void vApplicationSetupTimerInterrupt( void )
 {
 	// Start the timer than activate timer interrupt to switch into first task.
 	EALLOW;
-	PieVectTable.TINT2 = &vTickISREntry;
+	PieVectTable.TINT2 = &portTICK_ISR;
 	EDIS;
 
 	ConfigCpuTimer(&CpuTimer2,

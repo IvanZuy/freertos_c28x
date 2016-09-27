@@ -26,14 +26,9 @@
   .ref _xTaskIncrementTick
   .ref _vTaskSwitchContext
 
-  .def _portSAVE_CONTEXT
-  .def _portRESTORE_CONTEXT
-  .def _portSAVE_IER
-  .def _portRESTORE_IER_NOFPU
-  .def _portRESTORE_IER_FPU32
   .def _portTICK_ISR
 
-_portSAVE_CONTEXT:
+_portSAVE_STACK_POINTER:
   MOVL    XAR0, #_pxCurrentTCB
   MOVL    XAR0, *XAR0
   MOV     AR6, @SP
@@ -41,7 +36,7 @@ _portSAVE_CONTEXT:
   MOVL    *XAR0, XAR6
   LRETR
 
-_portRESTORE_CONTEXT:
+_portRESTORE_STACK_POINTER:
   MOVL    XAR0, #_pxCurrentTCB
   MOVL    XAR0, *XAR0
   MOVL    XAR0, *XAR0
@@ -49,42 +44,28 @@ _portRESTORE_CONTEXT:
   MOV     @SP, AR0
   LRETR
 
-_portSAVE_IER:
-  MOVL    XAR0, #_cpuIER
-  OR      IER, #0x2000
-  MOV     *XAR0, IER
-  LRETR
-
-_portRESTORE_IER_NOFPU:
-  MOVL    XAR0, #_cpuIER
-  MOV     AR6, *XAR0
-  MOV     *-SP[20], AR6
-  LRETR
-
-_portRESTORE_IER_FPU32:
-  MOVL    XAR0, #_cpuIER
-  MOV     AR6, *XAR0
-  MOV     *-SP[32], AR6
-  LRETR
-
 _portTICK_ISR:
+; Save context
   ASP          
-  PUSH    RB
   PUSH    AR1H:AR0H
   MOVL    *SP++, XT
+  MOVL    *SP++, XAR2
+  MOVL    *SP++, XAR3
   MOVL    *SP++, XAR4
   MOVL    *SP++, XAR5
   MOVL    *SP++, XAR6
   MOVL    *SP++, XAR7
-  MOV32   *SP++, STF
-  MOV32   *SP++, R0H
-  MOV32   *SP++, R1H
-  MOV32   *SP++, R2H
-  MOV32   *SP++, R3H
 
-  LCR     _portSAVE_CONTEXT
-  LCR     _portSAVE_IER
+; Save IER.
+  MOVL    XAR0, #_cpuIER
+  OR      IER, #0x2000
+  MOV     *XAR0, IER
 
+; Save stack pointer in the task control block.
+  LCR     _portSAVE_STACK_POINTER
+
+; Increment tick counter if timer tick is executed.
+; Don't increment if explicitly yielded.
   MOVL    XAR0, #_bYield
   MOV     ACC, *XAR0
   SB      RESET_YIELD_FLAG, NEQ
@@ -94,20 +75,23 @@ RESET_YIELD_FLAG:
   MOV     ACC, #0
   MOV     *XAR0, ACC
   LCR     _vTaskSwitchContext
-  LCR     _portRESTORE_CONTEXT
-  LCR     _portRESTORE_IER_FPU32
 
-  MOV32   R3H, *--SP
-  MOV32   R2H, *--SP
-  MOV32   R1H, *--SP
-  MOV32   R0H, *--SP
-  MOV32   STF, *--SP
+; Restore stack pointer from new task control block.
+  LCR     _portRESTORE_STACK_POINTER
+
+; Restore IER.
+  MOVL    XAR0, #_cpuIER
+  MOV     AR6, *XAR0
+  MOV     *-SP[22], AR6
+
+; Restore context.
   MOVL    XAR7, *--SP
   MOVL    XAR6, *--SP
   MOVL    XAR5, *--SP
   MOVL    XAR4, *--SP
+  MOVL    XAR3, *--SP
+  MOVL    XAR2, *--SP
   MOVL    XT, *--SP
   POP     AR1H:AR0H
-  POP     RB
   NASP 
   IRET
