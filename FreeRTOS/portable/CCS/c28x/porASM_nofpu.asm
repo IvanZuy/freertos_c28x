@@ -28,26 +28,11 @@
 
   .def _portTICK_ISR
 
-_portSAVE_STACK_POINTER:
-  MOVL    XAR0, #_pxCurrentTCB
-  MOVL    XAR0, *XAR0
-  MOV     AR6, @SP
-  SUBB    XAR6, #2
-  MOVL    *XAR0, XAR6
-  LRETR
-
-_portRESTORE_STACK_POINTER:
-  MOVL    XAR0, #_pxCurrentTCB
-  MOVL    XAR0, *XAR0
-  MOVL    XAR0, *XAR0
-  ADDB    XAR0, #2
-  MOV     @SP, AR0
-  LRETR
-
 _portTICK_ISR:
 ; Save context
   ASP          
   PUSH    AR1H:AR0H
+  PUSH    RPC
   MOVL    *SP++, XT
   MOVL    *SP++, XAR2
   MOVL    *SP++, XAR3
@@ -62,7 +47,10 @@ _portTICK_ISR:
   MOV     *XAR0, IER
 
 ; Save stack pointer in the task control block.
-  LCR     _portSAVE_STACK_POINTER
+  MOVL    XAR0, #_pxCurrentTCB
+  MOVL    XAR0, *XAR0
+  MOV     AR6, @SP
+  MOVL    *XAR0, XAR6
 
 ; Increment tick counter if timer tick is executed.
 ; Don't increment if explicitly yielded.
@@ -77,12 +65,15 @@ RESET_YIELD_FLAG:
   LCR     _vTaskSwitchContext
 
 ; Restore stack pointer from new task control block.
-  LCR     _portRESTORE_STACK_POINTER
+  MOVL    XAR0, #_pxCurrentTCB
+  MOVL    XAR0, *XAR0
+  MOVL    XAR0, *XAR0
+  MOV     @SP, AR0
 
 ; Restore IER.
   MOVL    XAR0, #_cpuIER
   MOV     AR6, *XAR0
-  MOV     *-SP[22], AR6
+  MOV     *-SP[24], AR6
 
 ; Restore context.
   MOVL    XAR7, *--SP
@@ -92,6 +83,7 @@ RESET_YIELD_FLAG:
   MOVL    XAR3, *--SP
   MOVL    XAR2, *--SP
   MOVL    XT, *--SP
+  POP     RPC
   POP     AR1H:AR0H
   NASP 
   IRET

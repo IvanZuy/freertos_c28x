@@ -24,6 +24,24 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask, signed char *pcTaskName 
 }
 
 //-------------------------------------------------------------------------------------------------
+static void blueLedToggle(void)
+{
+	static uint32_t counter = 0;
+
+	counter++;
+	GPIO_WritePin(13, counter & 1);
+}
+
+//-------------------------------------------------------------------------------------------------
+static void redLedToggle(void)
+{
+	static uint32_t counter = 0;
+
+	counter++;
+	GPIO_WritePin(12, counter & 1);
+}
+
+//-------------------------------------------------------------------------------------------------
 void vApplicationSetupTimerInterrupt( void )
 {
 	// Start the timer than activate timer interrupt to switch into first task.
@@ -56,7 +74,7 @@ static void setupTimer1( void )
 
 	ConfigCpuTimer(&CpuTimer1,
 	               configCPU_CLOCK_HZ / 1000000,  // CPU clock in MHz
-	               100); 						  // Timer period in uS
+	               1000); 						  // Timer period in uS
 	CpuTimer1Regs.TCR.all = 0x4000;               // Enable interrupt and start timer
 
 	IER |= M_INT13;
@@ -65,17 +83,11 @@ static void setupTimer1( void )
 //-------------------------------------------------------------------------------------------------
 void LED_TaskRed(void * pvParameters)
 {
-	uint32_t counter = 0;
-
-//    setupTimer1();
-
 	for(;;)
 	{
-//		if(xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE)
+		if(xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE)
 		{
-			counter++;
-			GPIO_WritePin(12, counter & 1);
-			vTaskDelay(10 / portTICK_PERIOD_MS);
+			blueLedToggle();
 		}
 	}
 }
@@ -83,12 +95,9 @@ void LED_TaskRed(void * pvParameters)
 //-------------------------------------------------------------------------------------------------
 void LED_TaskBlue(void * pvParameters)
 {
-	uint32_t counter = 0;
-
 	for(;;)
 	{
-		counter++;
-		GPIO_WritePin(13, counter & 1);
+		redLedToggle();
 		vTaskDelay(50 / portTICK_PERIOD_MS);
 	}
 }
@@ -146,6 +155,8 @@ void main(void)
     InitPieVectTable();
 
     xSemaphore = xSemaphoreCreateBinaryStatic( &xSemaphoreBuffer );
+
+    setupTimer1();
 
     // Enable global Interrupts and higher priority real-time debug events:
     EINT;  // Enable Global interrupt INTM
