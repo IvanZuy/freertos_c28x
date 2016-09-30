@@ -53,6 +53,7 @@ void vApplicationSetupTimerInterrupt( void )
 	               configCPU_CLOCK_HZ / 1000000,  // CPU clock in MHz
 	               1000000 / configTICK_RATE_HZ); // Timer period in uS
 	CpuTimer2Regs.TCR.all = 0x4000;               // Enable interrupt and start timer
+	IER |= M_INT14;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -61,6 +62,8 @@ interrupt void timer1_ISR( void )
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
 	xSemaphoreGiveFromISR( xSemaphore, &xHigherPriorityTaskWoken );
+	blueLedToggle();
+
 	portYIELD_FROM_ISR( pdTRUE );
 }
 
@@ -74,7 +77,7 @@ static void setupTimer1( void )
 
 	ConfigCpuTimer(&CpuTimer1,
 	               configCPU_CLOCK_HZ / 1000000,  // CPU clock in MHz
-	               1000); 						  // Timer period in uS
+	               100); 						  // Timer period in uS
 	CpuTimer1Regs.TCR.all = 0x4000;               // Enable interrupt and start timer
 
 	IER |= M_INT13;
@@ -87,7 +90,7 @@ void LED_TaskRed(void * pvParameters)
 	{
 		if(xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE)
 		{
-			blueLedToggle();
+			redLedToggle();
 		}
 	}
 }
@@ -97,8 +100,9 @@ void LED_TaskBlue(void * pvParameters)
 {
 	for(;;)
 	{
-		redLedToggle();
-		vTaskDelay(50 / portTICK_PERIOD_MS);
+//		blueLedToggle();
+		while(1);
+//		vTaskDelay(1 / portTICK_PERIOD_MS);
 	}
 }
 
@@ -167,7 +171,7 @@ void main(void)
                	  	  "Red LED task",  		// Text name for the task.
 					  STACK_SIZE,      		// Number of indexes in the xStack array.
 					  ( void * ) 1,    		// Parameter passed into the task.
-					  tskIDLE_PRIORITY,		// Priority at which the task is created.
+					  tskIDLE_PRIORITY + 2, // Priority at which the task is created.
 					  redTaskStack,         // Array to use as the task's stack.
 					  &redTaskBuffer );  	// Variable to hold the task's data structure.
 
@@ -175,7 +179,7 @@ void main(void)
 					  "Blue LED task",  	// Text name for the task.
 					  STACK_SIZE,      		// Number of indexes in the xStack array.
 					  ( void * ) 2,    		// Parameter passed into the task.
-					  tskIDLE_PRIORITY,		// Priority at which the task is created.
+					  tskIDLE_PRIORITY + 1,	// Priority at which the task is created.
 					  blueTaskStack, 		// Array to use as the task's stack.
 					  &blueTaskBuffer );  	// Variable to hold the task's data structure.
 

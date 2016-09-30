@@ -21,7 +21,6 @@
 ;-------------------------------------------------------------------------------------------------
 
   .ref _pxCurrentTCB
-  .ref _cpuIER
   .ref _bYield
   .ref _xTaskIncrementTick
   .ref _vTaskSwitchContext
@@ -42,9 +41,7 @@ _portTICK_ISR:
   MOVL    *SP++, XAR7
 
 ; Save IER.
-  MOVL    XAR0, #_cpuIER
-  OR      IER, #0x2000
-  MOV     *XAR0, IER
+  MOV     AR7, *-SP[24]
 
 ; Save stack pointer in the task control block.
   MOVL    XAR0, #_pxCurrentTCB
@@ -71,9 +68,7 @@ RESET_YIELD_FLAG:
   MOV     @SP, AR0
 
 ; Restore IER.
-  MOVL    XAR0, #_cpuIER
-  MOV     AR6, *XAR0
-  MOV     *-SP[24], AR6
+  MOV     *-SP[24], AR7
 
 ; Restore context.
   MOVL    XAR7, *--SP

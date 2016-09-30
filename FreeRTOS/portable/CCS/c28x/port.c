@@ -56,7 +56,6 @@ extern void vApplicationSetupTimerInterrupt( void );
 // sequence.
 volatile uint16_t usCriticalNesting = portINITIAL_CRITICAL_NESTING;
 volatile uint16_t bYield = 0;
-volatile uint16_t cpuIER = 0;
 volatile StackType_t *pMainContextSP;
 
 //-------------------------------------------------------------------------------------------------
