@@ -117,7 +117,7 @@ SECTIONS
 
    .stack           : > RAMM1,     PAGE = 1
    .ebss            : > RAML2,     PAGE = 1
-   .econst          : > RAML2 | RAML3,     PAGE = 1
+   .econst          : > RAML2 | RAML3 | RAMM1,     PAGE = 1
    .esysmem         : > RAML2,     PAGE = 1
 
    IQmath           : > RAML0L1,   PAGE = 0

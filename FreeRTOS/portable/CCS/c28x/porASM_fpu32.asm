@@ -50,15 +50,15 @@ _portTICK_ISR:
   MOV32   *SP++, R6H
   MOV32   *SP++, R7H
 
-; Save IER.
-  MOV     AR7, *-SP[44]
-
 ; Save stack pointer in the task control block.
-;  LCR     _portSAVE_STACK_POINTER
   MOVL    XAR0, #_pxCurrentTCB
   MOVL    XAR0, *XAR0
   MOV     AR6, @SP
   MOVL    *XAR0, XAR6
+
+; Save IER on stack to avoid corruption.
+  MOV     AR7, *-SP[44]
+  MOVL    *SP++, XAR7
 
 ; Increment tick counter if timer tick is executed.
 ; Don't increment if explicitly yielded.
@@ -72,14 +72,16 @@ RESET_YIELD_FLAG:
   MOV     *XAR0, ACC
   LCR     _vTaskSwitchContext
 
+; Restore IER value from stack.
+  MOVL    XAR7, *--SP
+
 ; Restore stack pointer from new task control block.
-;  LCR     _portRESTORE_STACK_POINTER
   MOVL    XAR0, #_pxCurrentTCB
   MOVL    XAR0, *XAR0
   MOVL    XAR0, *XAR0
   MOV     @SP, AR0
 
-; Restore IER.
+; Update IER value in target context.
   MOV     *-SP[44], AR7
 
 ; Restore context.

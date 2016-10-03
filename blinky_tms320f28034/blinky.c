@@ -3,7 +3,7 @@
 #include "task.h"
 #include "semphr.h"
 
-#define STACK_SIZE 	64U
+#define STACK_SIZE 	128U
 
 static StaticTask_t redTaskBuffer;
 static StackType_t  redTaskStack[STACK_SIZE];
@@ -27,9 +27,41 @@ void vApplicationSetupTimerInterrupt( void )
 
 	ConfigCpuTimer(&CpuTimer2,
 	               configCPU_CLOCK_HZ / 1000000,  // CPU clock in MHz
-	               1000000 / configTICK_RATE_HZ); // Timer period in uS
+				   1000000 / configTICK_RATE_HZ); // Timer period in uS
 	CpuTimer2Regs.TCR.all = 0x4000;               // Enable interrupt and start timer
 	IER |= M_INT14;
+}
+
+//-------------------------------------------------------------------------------------------------
+static void blueLedToggle(void)
+{
+	static uint32_t counter = 0;
+
+	counter++;
+	if(counter & 1)
+	{
+		GpioDataRegs.GPACLEAR.bit.GPIO1 = 1;
+	}
+	else
+	{
+		GpioDataRegs.GPASET.bit.GPIO1 = 1;
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+static void redLedToggle(void)
+{
+	static uint32_t counter = 0;
+
+	counter++;
+	if(counter & 1)
+	{
+		GpioDataRegs.GPACLEAR.bit.GPIO2 = 1;
+	}
+	else
+	{
+		GpioDataRegs.GPASET.bit.GPIO2 = 1;
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -51,7 +83,7 @@ static void setupTimer1( void )
 
 	ConfigCpuTimer(&CpuTimer1,
 	               configCPU_CLOCK_HZ / 1000000,  // CPU clock in MHz
-	               100); 						  // Timer period in uS
+	               100000); 					  // Timer period in uS
 	CpuTimer1Regs.TCR.all = 0x4000;               // Enable interrupt and start timer
 
 	IER |= M_INT13;
@@ -60,21 +92,11 @@ static void setupTimer1( void )
 //-------------------------------------------------------------------------------------------------
 void LED_TaskRed(void * pvParameters)
 {
-	static uint32_t counter = 0;
-
 	for(;;)
 	{
 		if(xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE)
 		{
-			counter++;
-			if(counter & 1)
-			{
-				GpioDataRegs.GPACLEAR.bit.GPIO1 = 1;
-			}
-			else
-			{
-				GpioDataRegs.GPASET.bit.GPIO1 = 1;
-			}
+			blueLedToggle();
 		}
 	}
 }
@@ -82,19 +104,9 @@ void LED_TaskRed(void * pvParameters)
 //-------------------------------------------------------------------------------------------------
 void LED_TaskBlue(void * pvParameters)
 {
-	uint32_t counter = 0;
-
 	for(;;)
 	{
-		counter++;
-		if(counter & 1)
-		{
-			GpioDataRegs.GPACLEAR.bit.GPIO2 = 1;
-		}
-		else
-		{
-			GpioDataRegs.GPASET.bit.GPIO2 = 1;
-		}
+		redLedToggle();
 		vTaskDelay(500 / portTICK_PERIOD_MS);
 	}
 }
@@ -173,7 +185,7 @@ void main(void)
                	  	  "Red LED task",  		// Text name for the task.
 					  STACK_SIZE,      		// Number of indexes in the xStack array.
 					  ( void * ) 1,    		// Parameter passed into the task.
-					  tskIDLE_PRIORITY + 1,	// Priority at which the task is created.
+					  tskIDLE_PRIORITY + 2,	// Priority at which the task is created.
 					  redTaskStack,         // Array to use as the task's stack.
 					  &redTaskBuffer );  	// Variable to hold the task's data structure.
 
