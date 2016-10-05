@@ -62,9 +62,8 @@ interrupt void timer1_ISR( void )
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
 	xSemaphoreGiveFromISR( xSemaphore, &xHigherPriorityTaskWoken );
-	blueLedToggle();
 
-	portYIELD_FROM_ISR( pdTRUE );
+	portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
 }
 
 //-------------------------------------------------------------------------------------------------
