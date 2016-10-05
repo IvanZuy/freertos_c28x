@@ -110,6 +110,7 @@ extern volatile uint16_t usCriticalNesting;                                 \
 
 extern void vPortYield( void );
 extern void portTICK_ISR( void );
+extern void portRESTORE_FIRST_CONTEXT( void );
 extern void vTaskSwitchContext( void );
 
 //-------------------------------------------------------------------------------------------------

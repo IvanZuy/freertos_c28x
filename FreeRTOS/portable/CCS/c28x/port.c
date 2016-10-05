@@ -39,11 +39,6 @@
 # define AUX_REGISTERS_TO_SAVE        9  // XAR registers only
 #endif
 
-// We require the address of the pxCurrentTCB variable, but don't want to know
-// any details of its type.
-typedef void TCB_t;
-extern volatile TCB_t * volatile pxCurrentTCB;
-
 extern void vApplicationSetupTimerInterrupt( void );
 
 // Each task maintains a count of the critical section nesting depth.  Each
@@ -112,12 +107,7 @@ BaseType_t xPortStartScheduler(void)
 
   usCriticalNesting = 0;
 
-  // At first start pxCurrentTCB is not defined.
-  // Since context switch uses first member only to save SP,
-  // we can simply use local variable to save stack pointer.
-  pxCurrentTCB = pMainContextSP;
-  __asm(" INTR INT14");
-//  while(1);
+  portRESTORE_FIRST_CONTEXT();
 
   // Should not get here!
   return pdFAIL;

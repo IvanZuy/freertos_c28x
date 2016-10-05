@@ -3,7 +3,7 @@
 #include "task.h"
 #include "semphr.h"
 
-#define STACK_SIZE 	128U
+#define STACK_SIZE 	256U
 
 static StaticTask_t redTaskBuffer;
 static StackType_t  redTaskStack[STACK_SIZE];
@@ -77,7 +77,7 @@ static void setupTimer1( void )
 
 	ConfigCpuTimer(&CpuTimer1,
 	               configCPU_CLOCK_HZ / 1000000,  // CPU clock in MHz
-	               100); 						  // Timer period in uS
+	               100000); 					  // Timer period in uS
 	CpuTimer1Regs.TCR.all = 0x4000;               // Enable interrupt and start timer
 
 	IER |= M_INT13;
@@ -100,9 +100,8 @@ void LED_TaskBlue(void * pvParameters)
 {
 	for(;;)
 	{
-//		blueLedToggle();
-		while(1);
-//		vTaskDelay(1 / portTICK_PERIOD_MS);
+		blueLedToggle();
+		vTaskDelay(250 / portTICK_PERIOD_MS);
 	}
 }
 

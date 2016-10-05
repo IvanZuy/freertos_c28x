@@ -26,6 +26,22 @@
   .ref _vTaskSwitchContext
 
   .def _portTICK_ISR
+  .def _portRESTORE_FIRST_CONTEXT
+
+_portRESTORE_FIRST_CONTEXT
+; Restore stack pointer from new task control block.
+  MOVL    XAR0, #_pxCurrentTCB
+  MOVL    XAR0, *XAR0
+  MOVL    XAR0, *XAR0
+  MOV     @SP, AR0
+
+; Restore RPC from saved task stack.
+; and return to main task function.
+  SUBB   SP, #39
+  POP    RPC
+  SUBB   SP, #11
+  LRETR
+
 
 _portTICK_ISR:
 ; Save context
