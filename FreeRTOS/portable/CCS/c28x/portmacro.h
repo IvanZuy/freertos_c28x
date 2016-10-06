@@ -106,7 +106,7 @@ extern volatile uint16_t usCriticalNesting;                                 \
 // Task utilities.
 //-------------------------------------------------------------------------------------------------
 #define portYIELD() vPortYield()
-#define portYIELD_FROM_ISR( x )  if(x == pdTRUE){bYield = 1; __asm(" INTR INT14");}
+#define portYIELD_FROM_ISR( x )  if(x == pdTRUE){bYield = 1; __asm(" OR IFR, #0x2000");}
 
 extern void vPortYield( void );
 extern void portTICK_ISR( void );
