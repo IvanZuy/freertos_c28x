@@ -96,9 +96,9 @@
 			<locationURI>PARENT-1-PROJECT_LOC/FreeRTOS/tasks.c</locationURI>
 		</link>
 		<link>
-			<name>FreeRTOS/port/porASM_nofpu.asm</name>
+			<name>FreeRTOS/port/porASM.asm</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/FreeRTOS/portable/CCS/c28x/porASM_nofpu.asm</locationURI>
+			<locationURI>PARENT-1-PROJECT_LOC/FreeRTOS/portable/CCS/c28x/porASM.asm</locationURI>
 		</link>
 		<link>
 			<name>FreeRTOS/port/port.c</name>
