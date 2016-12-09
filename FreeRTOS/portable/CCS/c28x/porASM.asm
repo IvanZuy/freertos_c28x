@@ -37,9 +37,11 @@ _portRESTORE_FIRST_CONTEXT
   MOVL    XAR0, *XAR0
   MOV     @SP, AR0
 
-; Restore RPC from saved task stack.
+; Restore XAR4 and RPC from saved task stack.
 ; and return to main task function.
-  SUBB   SP, #39
+  SUBB   SP, #23
+  POP    XAR4
+  SUBB   SP, #14
   POP    RPC
   SUBB   SP, #11
   LRETR
@@ -133,9 +135,11 @@ _portRESTORE_FIRST_CONTEXT
   MOVL    XAR0, *XAR0
   MOV     @SP, AR0
 
-; Restore RPC from saved task stack.
+; Restore XAR4 and RPC from saved task stack.
 ; and return to main task function.
-  SUBB   SP, #19
+  SUBB   SP, #5
+  POP    XAR4
+  SUBB   SP, #12
   POP    RPC
   SUBB   SP, #11
   LRETR

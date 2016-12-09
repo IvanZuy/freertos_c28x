@@ -35,8 +35,10 @@
 #define portFLAGS_INT_ENABLED         ( ( StackType_t ) 0x08 )
 #if defined(__TMS320C28XX_FPU32__)
 # define AUX_REGISTERS_TO_SAVE        19 // XAR + FPU registers
+# define XAR4_REGISTER_POSITION       6  // XAR4 position in AUX registers array
 #else
 # define AUX_REGISTERS_TO_SAVE        9  // XAR registers only
+# define XAR4_REGISTER_POSITION       5  // XAR4 position in AUX registers array
 #endif
 
 extern void vApplicationSetupTimerInterrupt( void );
@@ -59,11 +61,12 @@ volatile uint16_t bYield = 0;
 StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t pxCode, void *pvParameters )
 {
   uint16_t i;
+  uint16_t base;
 
   pxTopOfStack[0]  = 0x0080;  // ST0. PSM = 0(No shift)
   pxTopOfStack[1]  = 0x0000;  // T
-  pxTopOfStack[2]  = ((uint32_t)pvParameters) & 0xFFFFU;       // AL
-  pxTopOfStack[3]  = ((uint32_t)pvParameters >> 16) & 0x00FFU; // AH
+  pxTopOfStack[2]  = 0x0000;  // AL
+  pxTopOfStack[3]  = 0x0000;  // AH
   pxTopOfStack[4]  = 0xFFFF;  // PL
   pxTopOfStack[5]  = 0xFFFF;  // PH
   pxTopOfStack[6]  = 0xFFFF;  // AR0
@@ -75,13 +78,24 @@ StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t px
   pxTopOfStack[12] = ((uint32_t)pxCode) & 0xFFFFU;       // PCL
   pxTopOfStack[13] = ((uint32_t)pxCode >> 16) & 0x00FFU; // PCH
   pxTopOfStack[14] = 0xAAAA;  // Alignment
+  pxTopOfStack[15] = 0xBBBB;  // Alignment
 
   // Fill the rest of the registers with dummy values.
-  for(i = 15; i < (15 + (2 * AUX_REGISTERS_TO_SAVE)); i++)
+  base = 16;
+  for(i = 0; i < (2 * AUX_REGISTERS_TO_SAVE); i++)
   {
-    pxTopOfStack[i] = 0x0000;
+    uint16_t low  = 0x0000;
+    uint16_t high = 0x0000;
+
+    if(i == (2 * XAR4_REGISTER_POSITION))
+    {
+      low  = ((uint32_t)pvParameters) & 0xFFFFU;
+      high = ((uint32_t)pvParameters >> 16) & 0xFFFFU;
+    }
+
+    pxTopOfStack[base + i] = low;
     i++;
-    pxTopOfStack[i] = 0x0000;
+    pxTopOfStack[base + i] = high;
   }
   pxTopOfStack += 16 + (2 * AUX_REGISTERS_TO_SAVE);
 
