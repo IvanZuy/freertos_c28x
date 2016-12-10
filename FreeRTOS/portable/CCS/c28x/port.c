@@ -137,11 +137,3 @@ BaseType_t xPortStartScheduler(void)
   // Should not get here!
   return pdFAIL;
 }
-
-//-------------------------------------------------------------------------------------------------
-void vPortYield( void )
-{
-  // Activate timer interrupt to switch context.
-  bYield = 1;
-  __asm(" INTR INT14");
-}
