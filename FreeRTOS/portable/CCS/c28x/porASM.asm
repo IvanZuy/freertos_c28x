@@ -30,6 +30,13 @@
 
   .if .TMS320C2800_FPU32 = 1
 
+  .def _getSTF
+
+_getSTF
+  MOV32   *SP++, STF
+  POP     ACC
+  LRETR
+
 _portRESTORE_FIRST_CONTEXT
 ; Restore stack pointer from new task control block.
   MOVL    XAR0, #_pxCurrentTCB

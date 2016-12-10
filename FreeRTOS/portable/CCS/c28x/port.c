@@ -36,11 +36,13 @@
 #if defined(__TMS320C28XX_FPU32__)
 # define AUX_REGISTERS_TO_SAVE        19 // XAR + FPU registers
 # define XAR4_REGISTER_POSITION       6  // XAR4 position in AUX registers array
+# define STF_REGISTER_POSITION        10 // STF position in AUX registers array
 #else
 # define AUX_REGISTERS_TO_SAVE        9  // XAR registers only
 # define XAR4_REGISTER_POSITION       5  // XAR4 position in AUX registers array
 #endif
 
+extern uint32_t getSTF( void );
 extern void vApplicationSetupTimerInterrupt( void );
 
 // Each task maintains a count of the critical section nesting depth.  Each
@@ -92,6 +94,16 @@ StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t px
       low  = ((uint32_t)pvParameters) & 0xFFFFU;
       high = ((uint32_t)pvParameters >> 16) & 0xFFFFU;
     }
+
+#if defined(__TMS320C28XX_FPU32__)
+    if(i == (2 * STF_REGISTER_POSITION))
+    {
+      uint32_t stf = getSTF();
+
+      low  = stf & 0xFFFFU;
+      high = (stf >> 16) & 0xFFFFU;
+    }
+#endif
 
     pxTopOfStack[base + i] = low;
     i++;
