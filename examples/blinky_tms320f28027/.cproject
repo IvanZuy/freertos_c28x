@@ -8,7 +8,6 @@
 					<extension id="com.ti.ccstudio.errorparser.CoffErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="com.ti.ccstudio.errorparser.LinkErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="com.ti.ccstudio.errorparser.AsmErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="com.ti.ccstudio.binaryparser.CoffParser" point="org.eclipse.cdt.core.BinaryParser"/>
 				</extensions>
 			</storageModule>
@@ -37,8 +36,8 @@
 								<option id="com.ti.ccstudio.buildDefinitions.C2000_15.12.compilerID.INCLUDE_PATH.287119719" name="Add dir to #include search path (--include_path, -I)" superClass="com.ti.ccstudio.buildDefinitions.C2000_15.12.compilerID.INCLUDE_PATH" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${CG_TOOL_ROOT}/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${PROJECT_LOC}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${PROJECT_LOC}\..\FreeRTOS\include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${PROJECT_LOC}\..\FreeRTOS\portable\CCS\c28x&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${PROJECT_LOC}\..\..\FreeRTOS\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${PROJECT_LOC}\..\..\FreeRTOS\portable\CCS\c28x&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${TI_PRODUCTS_DIR}\controlSUITE\device_support\f2802x\v230\f2802x_headers\include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${TI_PRODUCTS_DIR}\controlSUITE\device_support\f2802x\v230\f2802x_common\include&quot;"/>
 								</option>

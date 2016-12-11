@@ -78,7 +78,7 @@
 		<link>
 			<name>FreeRTOS/list.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/FreeRTOS/list.c</locationURI>
+			<locationURI>PARENT-2-PROJECT_LOC/FreeRTOS/list.c</locationURI>
 		</link>
 		<link>
 			<name>FreeRTOS/port</name>
@@ -88,27 +88,27 @@
 		<link>
 			<name>FreeRTOS/queue.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/FreeRTOS/queue.c</locationURI>
+			<locationURI>PARENT-2-PROJECT_LOC/FreeRTOS/queue.c</locationURI>
 		</link>
 		<link>
 			<name>FreeRTOS/tasks.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/FreeRTOS/tasks.c</locationURI>
+			<locationURI>PARENT-2-PROJECT_LOC/FreeRTOS/tasks.c</locationURI>
 		</link>
 		<link>
 			<name>FreeRTOS/port/porASM.asm</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/FreeRTOS/portable/CCS/c28x/porASM.asm</locationURI>
+			<locationURI>PARENT-2-PROJECT_LOC/FreeRTOS/portable/CCS/c28x/porASM.asm</locationURI>
 		</link>
 		<link>
 			<name>FreeRTOS/port/port.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/FreeRTOS/portable/CCS/c28x/port.c</locationURI>
+			<locationURI>PARENT-2-PROJECT_LOC/FreeRTOS/portable/CCS/c28x/port.c</locationURI>
 		</link>
 		<link>
 			<name>FreeRTOS/port/portmacro.h</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/FreeRTOS/portable/CCS/c28x/portmacro.h</locationURI>
+			<locationURI>PARENT-2-PROJECT_LOC/FreeRTOS/portable/CCS/c28x/portmacro.h</locationURI>
 		</link>
 	</linkedResources>
 	<variableList>
