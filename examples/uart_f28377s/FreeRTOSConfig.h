@@ -28,6 +28,7 @@
 #define configCHECK_FOR_STACK_OVERFLOW      2
 #define configSUPPORT_STATIC_ALLOCATION     1
 #define configSUPPORT_DYNAMIC_ALLOCATION    0
+#define configUSE_MUTEXES                   1
 
 // Set the following definitions to 1 to include the API function, or zero
 // to exclude the API function.

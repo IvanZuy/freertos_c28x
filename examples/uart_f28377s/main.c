@@ -1,11 +1,14 @@
+#include <string.h>
 #include "F28x_Project.h"     // Device Headerfile and Examples Include File
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
+#include "uart.h"
 
 #define STACK_SIZE  256U
 #define RED         0xDEADBEAF
 #define BLUE        0xBAADF00D
+#define RX_BUFF_SIZE 10
 
 static StaticTask_t redTaskBuffer;
 static StackType_t  redTaskStack[STACK_SIZE];
@@ -15,9 +18,6 @@ static StackType_t  blueTaskStack[STACK_SIZE];
 
 static StaticTask_t idleTaskBuffer;
 static StackType_t  idleTaskStack[STACK_SIZE];
-
-static SemaphoreHandle_t xSemaphore = NULL;
-static StaticSemaphore_t xSemaphoreBuffer;
 
 //-------------------------------------------------------------------------------------------------
 void vApplicationStackOverflowHook( TaskHandle_t xTask, signed char *pcTaskName )
@@ -73,39 +73,18 @@ void vApplicationSetupTimerInterrupt( void )
 }
 
 //-------------------------------------------------------------------------------------------------
-interrupt void timer1_ISR( void )
-{
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-    xSemaphoreGiveFromISR( xSemaphore, &xHigherPriorityTaskWoken );
-
-    portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
-}
-
-//-------------------------------------------------------------------------------------------------
-static void setupTimer1( void )
-{
-    // Start the timer than activate timer interrupt to switch into first task.
-    EALLOW;
-    PieVectTable.TIMER1_INT = &timer1_ISR;
-    EDIS;
-
-    ConfigCpuTimer(&CpuTimer1,
-                   configCPU_CLOCK_HZ / 1000000,  // CPU clock in MHz
-                   100000);                       // Timer period in uS
-    CpuTimer1Regs.TCR.all = 0x4000;               // Enable interrupt and start timer
-
-    IER |= M_INT13;
-}
-
-//-------------------------------------------------------------------------------------------------
 void LED_TaskRed(void * pvParameters)
 {
+    uint16_t br = 0;
+    uint8_t buffer[RX_BUFF_SIZE] = {0};
+
     for(;;)
     {
-        if(xSemaphoreTake( xSemaphore, portMAX_DELAY ) == pdTRUE)
+        br = UART_receive(buffer, RX_BUFF_SIZE, 100 / portTICK_PERIOD_MS);
+        if(br > 0)
         {
             ledToggle((uint32_t)pvParameters);
+            UART_send(buffer, br);
         }
     }
 }
@@ -113,10 +92,14 @@ void LED_TaskRed(void * pvParameters)
 //-------------------------------------------------------------------------------------------------
 void LED_TaskBlue(void * pvParameters)
 {
+	const char str[] = "Test UART task 1\n\r";
+
     for(;;)
     {
         ledToggle((uint32_t)pvParameters);
-        vTaskDelay(250 / portTICK_PERIOD_MS);
+        UART_send((uint8_t*)str, strlen(str));
+
+        vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 }
 
@@ -172,9 +155,7 @@ void main(void)
     // This function is found in F2837xS_PieVect.c.
     InitPieVectTable();
 
-    xSemaphore = xSemaphoreCreateBinaryStatic( &xSemaphoreBuffer );
-
-    setupTimer1();
+    UART_open();
 
     // Enable global Interrupts and higher priority real-time debug events:
     EINT;  // Enable Global interrupt INTM
@@ -185,7 +166,7 @@ void main(void)
                       "Red LED task",       // Text name for the task.
                       STACK_SIZE,           // Number of indexes in the xStack array.
                       ( void * ) RED,       // Parameter passed into the task.
-                      tskIDLE_PRIORITY + 2, // Priority at which the task is created.
+                      tskIDLE_PRIORITY + 1, // Priority at which the task is created.
                       redTaskStack,         // Array to use as the task's stack.
                       &redTaskBuffer );     // Variable to hold the task's data structure.
 

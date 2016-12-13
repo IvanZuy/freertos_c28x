@@ -36,6 +36,11 @@
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
+			<name>drivers</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
 			<name>FreeRTOS/list.c</name>
 			<type>1</type>
 			<locationURI>PARENT-2-PROJECT_LOC/FreeRTOS/list.c</locationURI>
@@ -94,6 +99,11 @@
 			<name>controlSUITE/F2837xS_SysCtrl.c</name>
 			<type>1</type>
 			<locationURI>TI_PRODUCTS_DIR/controlSUITE/device_support/F2837xS/v200/F2837xS_common/source/F2837xS_SysCtrl.c</locationURI>
+		</link>
+		<link>
+			<name>drivers/uart.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/drivers/uart.c</locationURI>
 		</link>
 		<link>
 			<name>FreeRTOS/port/porASM.asm</name>
