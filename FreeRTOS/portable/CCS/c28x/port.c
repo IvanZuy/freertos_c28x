@@ -55,6 +55,7 @@ extern void vApplicationSetupTimerInterrupt( void );
 // sequence.
 volatile uint16_t usCriticalNesting = portINITIAL_CRITICAL_NESTING;
 volatile uint16_t bYield = 0;
+volatile uint16_t bPreemptive = 0;
 
 //-------------------------------------------------------------------------------------------------
 // Initialise the stack of a task to look exactly as if
@@ -131,6 +132,12 @@ BaseType_t xPortStartScheduler(void)
   vApplicationSetupTimerInterrupt();
 
   usCriticalNesting = 0;
+
+#if(configUSE_PREEMPTION == 1)
+  bPreemptive = 1;
+#else
+  bPreemptive = 0;
+#endif
 
   portRESTORE_FIRST_CONTEXT();
 

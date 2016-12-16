@@ -22,6 +22,7 @@
 
   .ref _pxCurrentTCB
   .ref _bYield
+  .ref _bPreemptive
   .ref _xTaskIncrementTick
   .ref _vTaskSwitchContext
 
@@ -94,10 +95,24 @@ _portTICK_ISR:
   LCR     _xTaskIncrementTick
 
 RESET_YIELD_FLAG:
+; Save bYield in AR1 and clear it in memory.
+  MOV     AR1, ACC
   MOV     ACC, #0
   MOV     *XAR0, ACC
+
+; Do context switch if bYield=1 or bPreemptive=1
+  MOVL    XAR0, #_bPreemptive
+  MOV     ACC, *XAR0
+  CMPB    AL, #0x1
+  SB      CONTEXT_SWITCH, EQ
+  MOV     ACC, AR1
+  CMPB    AL, #0x1
+  SB      SKIP_CONTEXT_SWITCH, NEQ
+
+CONTEXT_SWITCH:
   LCR     _vTaskSwitchContext
 
+SKIP_CONTEXT_SWITCH:
 ; Restore IER value from stack.
   MOVL    XAR7, *--SP
 
@@ -182,10 +197,24 @@ _portTICK_ISR:
   LCR     _xTaskIncrementTick
 
 RESET_YIELD_FLAG:
+; Save bYield in AR1 and clear it in memory.
+  MOV     AR1, ACC
   MOV     ACC, #0
   MOV     *XAR0, ACC
+
+; Do context switch if bYield=1 or bPreemptive=1
+  MOVL    XAR0, #_bPreemptive
+  MOV     ACC, *XAR0
+  CMPB    AL, #0x1
+  SB      CONTEXT_SWITCH, EQ
+  MOV     ACC, AR1
+  CMPB    AL, #0x1
+  SB      SKIP_CONTEXT_SWITCH, NEQ
+
+CONTEXT_SWITCH:
   LCR     _vTaskSwitchContext
 
+SKIP_CONTEXT_SWITCH:
 ; Restore IER value from stack.
   MOVL    XAR7, *--SP
 
