@@ -64,27 +64,26 @@ volatile uint16_t bPreemptive = 0;
 StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t pxCode, void *pvParameters )
 {
   uint16_t i;
-  uint16_t base;
+  uint16_t base = 0;
 
-  pxTopOfStack[0]  = 0x0080;  // ST0. PSM = 0(No shift)
-  pxTopOfStack[1]  = 0x0000;  // T
-  pxTopOfStack[2]  = 0x0000;  // AL
-  pxTopOfStack[3]  = 0x0000;  // AH
-  pxTopOfStack[4]  = 0xFFFF;  // PL
-  pxTopOfStack[5]  = 0xFFFF;  // PH
-  pxTopOfStack[6]  = 0xFFFF;  // AR0
-  pxTopOfStack[7]  = 0xFFFF;  // AR1
-  pxTopOfStack[8]  = 0x8A08;  // ST1
-  pxTopOfStack[9]  = 0x0000;  // DP
-  pxTopOfStack[10] = 0x0000;  // IER
-  pxTopOfStack[11] = 0x0000;  // DBGSTAT
-  pxTopOfStack[12] = ((uint32_t)pxCode) & 0xFFFFU;       // PCL
-  pxTopOfStack[13] = ((uint32_t)pxCode >> 16) & 0x00FFU; // PCH
-  pxTopOfStack[14] = 0xAAAA;  // Alignment
-  pxTopOfStack[15] = 0xBBBB;  // Alignment
+  pxTopOfStack[base++]  = 0x0080;  // ST0. PSM = 0(No shift)
+  pxTopOfStack[base++]  = 0x0000;  // T
+  pxTopOfStack[base++]  = 0x0000;  // AL
+  pxTopOfStack[base++]  = 0x0000;  // AH
+  pxTopOfStack[base++]  = 0xFFFF;  // PL
+  pxTopOfStack[base++]  = 0xFFFF;  // PH
+  pxTopOfStack[base++]  = 0xFFFF;  // AR0
+  pxTopOfStack[base++]  = 0xFFFF;  // AR1
+  pxTopOfStack[base++]  = 0x8A08;  // ST1
+  pxTopOfStack[base++]  = 0x0000;  // DP
+  pxTopOfStack[base++] = 0x0000;  // IER
+  pxTopOfStack[base++] = 0x0000;  // DBGSTAT
+  pxTopOfStack[base++] = ((uint32_t)pxCode) & 0xFFFFU;       // PCL
+  pxTopOfStack[base++] = ((uint32_t)pxCode >> 16) & 0x00FFU; // PCH
+  pxTopOfStack[base++] = 0xAAAA;  // Alignment
+  pxTopOfStack[base++] = 0xBBBB;  // Alignment
 
   // Fill the rest of the registers with dummy values.
-  base = 16;
   for(i = 0; i < (2 * AUX_REGISTERS_TO_SAVE); i++)
   {
     uint16_t low  = 0x0000;
@@ -110,11 +109,17 @@ StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t px
     i++;
     pxTopOfStack[base + i] = high;
   }
-  pxTopOfStack += 16 + (2 * AUX_REGISTERS_TO_SAVE);
+
+  base += i;
+
+  // Reserve place for ST1 which will be used in context switch
+  // to set correct SPA bit ASAP.
+  pxTopOfStack[base++] = 0x8A18;  // ST1 with SPA bit set
+  pxTopOfStack[base++] = 0x0000;  // DP
 
   // Return a pointer to the top of the stack we have generated so this can
   // be stored in the task control block for the task.
-  return pxTopOfStack;
+  return pxTopOfStack + base;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -139,6 +144,7 @@ BaseType_t xPortStartScheduler(void)
   bPreemptive = 0;
 #endif
 
+  portENABLE_INTERRUPTS();
   portRESTORE_FIRST_CONTEXT();
 
   // Should not get here!
