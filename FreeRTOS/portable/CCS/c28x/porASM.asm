@@ -47,7 +47,7 @@ _portRESTORE_FIRST_CONTEXT
 
 ; Restore XAR4 and RPC from saved task stack.
 ; and return to main task function.
-  SUBB   SP, #23
+  SUBB   SP, #25
   POP    XAR4
   SUBB   SP, #14
   POP    RPC
@@ -76,6 +76,7 @@ _portTICK_ISR:
   MOV32   *SP++, R5H
   MOV32   *SP++, R6H
   MOV32   *SP++, R7H
+  PUSH    DP:ST1
 
 ; Save stack pointer in the task control block.
   MOVL    XAR0, #_pxCurrentTCB
@@ -84,7 +85,15 @@ _portTICK_ISR:
   MOVL    *XAR0, XAR6
 
 ; Save IER on stack to avoid corruption.
+  PUSH    ST1
+  POP     AL
+  TBIT    AL, #4
+  SB      SPA_BIT_SET, TC
   MOV     AR7, *-SP[44]
+  SB      SAVE_IER, UNC
+SPA_BIT_SET:
+  MOV     AR7, *-SP[46]
+SAVE_IER:
   MOVL    *SP++, XAR7
 
 ; Increment tick counter if timer tick is executed.
@@ -123,9 +132,17 @@ SKIP_CONTEXT_SWITCH:
   MOV     @SP, AR0
 
 ; Update IER value in target context.
+  POP     DP:ST1
+  PUSH    ST1
+  POP     AL
+  TBIT    AL, #4
+  SB      SPA_BIT_SET_RESTORE, TC
+  MOV     *-SP[42], AR7
+  SB      RESTORE_CONTEXT, UNC
+SPA_BIT_SET_RESTORE:
   MOV     *-SP[44], AR7
 
-; Restore context.
+RESTORE_CONTEXT:
   MOV32   R7H, *--SP
   MOV32   R6H, *--SP
   MOV32   R5H, *--SP
@@ -244,7 +261,6 @@ SKIP_CONTEXT_SWITCH:
 SPA_BIT_SET_RESTORE:
   MOV     *-SP[24], AR7
 
-; Restore context.
 RESTORE_CONTEXT:
   MOVL    XAR7, *--SP
   MOVL    XAR6, *--SP
