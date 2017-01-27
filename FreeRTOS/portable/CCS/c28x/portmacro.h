@@ -70,37 +70,10 @@ typedef uint16_t       UBaseType_t;
 //-------------------------------------------------------------------------------------------------
 // Critical section control macros.
 //-------------------------------------------------------------------------------------------------
-#define portNO_CRITICAL_SECTION_NESTING     ( ( uint16_t ) 0 )
-
-#define portENTER_CRITICAL()                                                \
-{                                                                           \
-extern volatile uint16_t usCriticalNesting;                                 \
-                                                                            \
-  portDISABLE_INTERRUPTS();                                                 \
-                                                                            \
-  /* Now interrupts are disabled usCriticalNesting can be accessed */       \
-  /* directly.  Increment ulCriticalNesting to keep a count of how many */  \
-  /* times portENTER_CRITICAL() has been called. */                         \
-  usCriticalNesting++;                                                      \
-}
-
-#define portEXIT_CRITICAL()                                                 \
-{                                                                           \
-extern volatile uint16_t usCriticalNesting;                                 \
-                                                                            \
-  if( usCriticalNesting > portNO_CRITICAL_SECTION_NESTING )                 \
-  {                                                                         \
-    /* Decrement the nesting count as we are leaving a critical section. */ \
-    usCriticalNesting--;                                                    \
-                                                                            \
-    /* If the nesting level has reached zero then interrupts should be */   \
-    /* re-enabled. */                                                       \
-    if( usCriticalNesting == portNO_CRITICAL_SECTION_NESTING )              \
-    {                                                                       \
-      portENABLE_INTERRUPTS();                                              \
-    }                                                                       \
-  }                                                                         \
-}
+extern void vPortEnterCritical( void );
+extern void vPortExitCritical( void );
+#define portENTER_CRITICAL()  vPortEnterCritical()
+#define portEXIT_CRITICAL()   vPortExitCritical()
 
 //-------------------------------------------------------------------------------------------------
 // Task utilities.

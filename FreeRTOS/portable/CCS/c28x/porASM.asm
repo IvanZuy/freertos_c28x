@@ -23,6 +23,7 @@
   .ref _pxCurrentTCB
   .ref _bYield
   .ref _bPreemptive
+  .ref _ulCriticalNesting
   .ref _xTaskIncrementTick
   .ref _vTaskSwitchContext
 
@@ -47,11 +48,12 @@ _portRESTORE_FIRST_CONTEXT
 
 ; Restore XAR4 and RPC from saved task stack.
 ; and return to main task function.
-  SUBB   SP, #25
+; SP should be set to stack start plus 2 before LRETR.
+  SUBB   SP, #28
   POP    XAR4
   SUBB   SP, #14
   POP    RPC
-  SUBB   SP, #11
+  SUBB   SP, #10
   LRETR
 
 _portTICK_ISR:
@@ -78,6 +80,11 @@ _portTICK_ISR:
   MOV32   *SP++, R7H
   PUSH    DP:ST1
 
+; Save critical section nesting counter
+  MOVL    XAR0, #_ulCriticalNesting
+  MOVL    ACC, *XAR0
+  PUSH    ACC
+
 ; Save stack pointer in the task control block.
   MOVL    XAR0, #_pxCurrentTCB
   MOVL    XAR0, *XAR0
@@ -85,14 +92,15 @@ _portTICK_ISR:
   MOVL    *XAR0, XAR6
 
 ; Save IER on stack to avoid corruption.
+; Depending on stack alignment bit IER can be found in two locations.
   PUSH    ST1
   POP     AL
   TBIT    AL, #4
   SB      SPA_BIT_SET, TC
-  MOV     AR7, *-SP[44]
+  MOV     AR7, *-SP[46]
   SB      SAVE_IER, UNC
 SPA_BIT_SET:
-  MOV     AR7, *-SP[46]
+  MOV     AR7, *-SP[48]
 SAVE_IER:
   MOVL    *SP++, XAR7
 
@@ -131,7 +139,13 @@ SKIP_CONTEXT_SWITCH:
   MOVL    XAR0, *XAR0
   MOV     @SP, AR0
 
+; Restore critical section nesting counter
+  MOVL    XAR0, #_ulCriticalNesting
+  POP     ACC
+  MOVL    *XAR0, ACC
+
 ; Update IER value in target context.
+; Depending on stack alignment bit IER can be found in two locations.
   POP     DP:ST1
   PUSH    ST1
   POP     AL
@@ -176,11 +190,12 @@ _portRESTORE_FIRST_CONTEXT
 
 ; Restore XAR4 and RPC from saved task stack.
 ; and return to main task function.
-  SUBB   SP, #7
+; SP should be set to stack start plus 2 before LRETR.
+  SUBB   SP, #10
   POP    XAR4
   SUBB   SP, #12
   POP    RPC
-  SUBB   SP, #11
+  SUBB   SP, #10
   LRETR
 
 _portTICK_ISR:
@@ -197,6 +212,11 @@ _portTICK_ISR:
   MOVL    *SP++, XAR7
   PUSH    DP:ST1
 
+; Save critical section nesting counter
+  MOVL    XAR0, #_ulCriticalNesting
+  MOVL    ACC, *XAR0
+  PUSH    ACC
+
 ; Save stack pointer in the task control block.
   MOVL    XAR0, #_pxCurrentTCB
   MOVL    XAR0, *XAR0
@@ -208,10 +228,10 @@ _portTICK_ISR:
   POP     AL
   TBIT    AL, #4
   SB      SPA_BIT_SET, TC
-  MOV     AR7, *-SP[24]
+  MOV     AR7, *-SP[26]
   SB      SAVE_IER, UNC
 SPA_BIT_SET:
-  MOV     AR7, *-SP[26]
+  MOV     AR7, *-SP[28]
 SAVE_IER:
   MOVL    *SP++, XAR7
 
@@ -249,6 +269,11 @@ SKIP_CONTEXT_SWITCH:
   MOVL    XAR0, *XAR0
   MOVL    XAR0, *XAR0
   MOV     @SP, AR0
+
+; Restore critical section nesting counter
+  MOVL    XAR0, #_ulCriticalNesting
+  POP     ACC
+  MOVL    *XAR0, ACC
 
 ; Update IER value in target context.
   POP     DP:ST1

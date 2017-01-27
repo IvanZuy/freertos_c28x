@@ -130,8 +130,8 @@ void LED_TaskBlue(void * pvParameters)
         if(++counter == 100)
         {
         	ledToggle((uint32_t)pvParameters);
-        	strcpy(strTaskRed, "R2\n\r");
-        	UART_send((uint8_t*)strTaskRed, strlen(strTaskRed));
+        	strcpy(strTaskBlue, "R2\n\r");
+        	UART_send((uint8_t*)strTaskBlue, strlen(strTaskBlue));
         	counter = 0;
         }
     }

@@ -50,10 +50,11 @@ extern void vApplicationSetupTimerInterrupt( void );
 // critical section is exited the count is decremented - with interrupts only
 // being re-enabled if the count is zero.
 //
-// usCriticalNesting will get set to zero when the scheduler starts, but must
+// ulCriticalNesting will get set to zero when the scheduler starts, but must
 // not be initialised to zero as this will cause problems during the startup
 // sequence.
-volatile uint16_t usCriticalNesting = portINITIAL_CRITICAL_NESTING;
+// ulCriticalNesting should be 32 bit value to keep stack alignment unchanged.
+volatile uint32_t ulCriticalNesting = portINITIAL_CRITICAL_NESTING;
 volatile uint16_t bYield = 0;
 volatile uint16_t bPreemptive = 0;
 
@@ -116,6 +117,8 @@ StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t px
   // to set correct SPA bit ASAP.
   pxTopOfStack[base++] = 0x8A18;  // ST1 with SPA bit set
   pxTopOfStack[base++] = 0x0000;  // DP
+  pxTopOfStack[base++] = 0x0000;  // placeholder for 32 bit ulCriticalNesting
+  pxTopOfStack[base++] = 0x0000;
 
   // Return a pointer to the top of the stack we have generated so this can
   // be stored in the task control block for the task.
@@ -136,7 +139,7 @@ BaseType_t xPortStartScheduler(void)
 {
   vApplicationSetupTimerInterrupt();
 
-  usCriticalNesting = 0;
+  ulCriticalNesting = 0;
 
 #if(configUSE_PREEMPTION == 1)
   bPreemptive = 1;
@@ -149,4 +152,21 @@ BaseType_t xPortStartScheduler(void)
 
   // Should not get here!
   return pdFAIL;
+}
+
+//-------------------------------------------------------------------------------------------------
+void vPortEnterCritical( void )
+{
+  portDISABLE_INTERRUPTS();
+  ulCriticalNesting++;
+}
+
+//-------------------------------------------------------------------------------------------------
+void vPortExitCritical( void )
+{
+  ulCriticalNesting--;
+  if( ulCriticalNesting == 0 )
+  {
+    portENABLE_INTERRUPTS();
+  }
 }
