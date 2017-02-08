@@ -20,6 +20,7 @@ static StackType_t  blueTaskStack[STACK_SIZE];
 static StaticTask_t idleTaskBuffer;
 static StackType_t  idleTaskStack[STACK_SIZE];
 
+uint8_t sdata[128];
 //-------------------------------------------------------------------------------------------------
 void vApplicationStackOverflowHook( TaskHandle_t xTask, signed char *pcTaskName )
 {
@@ -94,13 +95,12 @@ void LED_TaskRed(void * pvParameters)
 void LED_TaskBlue(void * pvParameters)
 {
 	const char str[] = "Test UART task 1\n\r";
-	const char hex[] = {0xF0, 0x0F};
 
     for(;;)
     {
         ledToggle((uint32_t)pvParameters);
         UART_send((uint8_t*)str, strlen(str));
-        SPI_send((uint8_t*)hex, sizeof(hex));
+        SPI_send(sdata, sizeof(sdata), 100 / portTICK_PERIOD_MS);
 
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
@@ -162,6 +162,12 @@ void main(void)
 
     UART_open();
     SPI_open();
+
+    uint8_t i;
+    for(i = 0; i < sizeof(sdata); i++)
+    {
+    	sdata[i] = i;
+    }
 
     // Enable global Interrupts and higher priority real-time debug events:
     EINT;  // Enable Global interrupt INTM

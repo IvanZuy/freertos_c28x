@@ -68,7 +68,7 @@ void UART_open(void)
   EDIS;
   PieCtrlRegs.PIECTRL.bit.ENPIE = 1;   // Enable the PIE block
   PieCtrlRegs.PIEIER9.bit.INTx1 = 1;   // PIE Group 9, INT1, SCIA_RX
-  IER = 0x100;                         // Enable CPU INT
+  IER = M_INT9;                        // Enable CPU INT9
 }
 
 //-------------------------------------------------------------------------------------------------

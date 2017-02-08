@@ -76,6 +76,11 @@
 			<locationURI>TI_PRODUCTS_DIR/controlSUITE/device_support/F2837xS/v200/F2837xS_common/source/F2837xS_DefaultISR.c</locationURI>
 		</link>
 		<link>
+			<name>controlSUITE/F2837xS_Dma.c</name>
+			<type>1</type>
+			<locationURI>PARENT-5-PROJECT_LOC/ti/controlSUITE/device_support/F2837xS/v210/F2837xS_common/source/F2837xS_Dma.c</locationURI>
+		</link>
+		<link>
 			<name>controlSUITE/F2837xS_GlobalVariableDefs.c</name>
 			<type>1</type>
 			<locationURI>TI_PRODUCTS_DIR/controlSUITE/device_support/F2837xS/v200/F2837xS_headers/source/F2837xS_GlobalVariableDefs.c</locationURI>

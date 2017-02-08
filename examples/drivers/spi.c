@@ -6,8 +6,70 @@
 #include "semphr.h"
 
 //-------------------------------------------------------------------------------------------------
-#define SPI_BRR        ((200E6 / 4) / 5E6) - 1
-#define SPI_CHAR_BITS  8
+#define SPI_BRR            ((200E6 / 4) / 5E6) - 1
+#define SPI_CHAR_BITS      8
+#define TX_FIFO_INT_LVL    2
+#define RX_DUMMY_VALUE     0xBAAD
+
+//-------------------------------------------------------------------------------------------------
+typedef enum {
+  SPI_TRANSMIT,
+  SPI_RECEIVE,
+}SpiOperation_E;
+
+static struct {
+  SpiOperation_E    operation;
+  uint8_t*          Buff;
+  uint16_t          BuffSize;
+  uint16_t          txBuffIdx;
+  uint16_t          rxBuffIdx;
+  SemaphoreHandle_t completeEvent;
+  StaticSemaphore_t completeEventBuffer;
+}SpiState;
+
+//-------------------------------------------------------------------------------------------------
+__interrupt void spiTxFifo_ISR(void)
+{
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+  if(SpiState.operation == SPI_TRANSMIT)
+  {
+    while(   (SpiaRegs.SPIFFTX.bit.TXFFST != 16)
+	      && (SpiState.txBuffIdx < SpiState.BuffSize))
+    {
+      SpiaRegs.SPITXBUF = SpiState.Buff[SpiState.txBuffIdx++] << (16 - SPI_CHAR_BITS);
+    }
+
+    if(SpiState.txBuffIdx == SpiState.BuffSize)
+    {
+      xSemaphoreGiveFromISR(SpiState.completeEvent, &xHigherPriorityTaskWoken);
+    }
+  }
+  else
+  {
+    while(   (SpiaRegs.SPIFFTX.bit.TXFFST != 16)
+	      && (SpiState.txBuffIdx < SpiState.BuffSize))
+	{
+	  SpiaRegs.SPITXBUF = RX_DUMMY_VALUE;
+	  SpiState.txBuffIdx++;
+	}
+
+    while(SpiaRegs.SPIFFRX.bit.RXFFST != 0)
+    {
+      SpiState.Buff[SpiState.rxBuffIdx++] = SpiaRegs.SPIRXBUF;
+    }
+
+    if(SpiState.txBuffIdx == SpiState.BuffSize)
+    {
+      xSemaphoreGiveFromISR(SpiState.completeEvent, &xHigherPriorityTaskWoken);
+    }
+  }
+
+  SpiaRegs.SPIFFTX.bit.TXFFINTCLR = 1;  // Clear Interrupt flag
+  PieCtrlRegs.PIEACK.all |= 0x20;       // Issue PIE ACK
+
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
 
 //-------------------------------------------------------------------------------------------------
 static void initPins(void)
@@ -61,7 +123,7 @@ static void initSpia(void)
   SpiaRegs.SPICTL.bit.SPIINTENA    = 0;
 
   // Initialize SPI TX_FIFO register
-  SpiaRegs.SPIFFTX.bit.TXFFIL      = 0;
+  SpiaRegs.SPIFFTX.bit.TXFFIL      = TX_FIFO_INT_LVL;
   SpiaRegs.SPIFFTX.bit.TXFFIENA    = 0;
   SpiaRegs.SPIFFTX.bit.TXFFINTCLR  = 1;
   SpiaRegs.SPIFFTX.bit.TXFIFO      = 1;
@@ -81,28 +143,32 @@ static void initSpia(void)
   SpiaRegs.SPIFFCT.all = 0x0;
 
   // Set the baud rate
-  SpiaRegs.SPIBRR.bit.SPI_BIT_RATE = 0;
+  SpiaRegs.SPIBRR.bit.SPI_BIT_RATE = SPI_BRR;
 
   // Set FREE bit
   // Halting on a breakpoint will not halt the SPI
   SpiaRegs.SPIPRI.bit.FREE = 1;
+
+  // Configure interrupts
+  EALLOW;
+  PieVectTable.SPIA_TX_INT = &spiTxFifo_ISR;
+  EDIS;
+  PieCtrlRegs.PIECTRL.bit.ENPIE = 1;     // Enable the PIE block
+  PieCtrlRegs.PIEIER6.bit.INTx2 = 1;     // Enable PIE Group 6, INT 2
+  IER=M_INT6;                            // Enable CPU INT6
 
   // Release the SPI from reset
   SpiaRegs.SPICCR.bit.SPISWRESET = 1;
 }
 
 //-------------------------------------------------------------------------------------------------
-static void initDma(void)
-{
-  
-}
-
-//-------------------------------------------------------------------------------------------------
 void SPI_open(void)
 {
+  // Init OS primitives.
+  SpiState.completeEvent = xSemaphoreCreateBinaryStatic(&SpiState.completeEventBuffer);
+
   initPins();
   initSpia();
-  initDma();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -112,23 +178,73 @@ void SPI_close(void)
 }
 
 //-------------------------------------------------------------------------------------------------
-uint16_t SPI_send(const uint8_t* buff, uint16_t buffSize)
+uint16_t SPI_send(uint8_t* buff, uint16_t buffSize, TickType_t timeout)
 {
-  uint16_t i = 0;
+  // Init transmitter state.
+  SpiState.operation  = SPI_TRANSMIT;
+  SpiState.Buff       = buff;
+  SpiState.BuffSize   = buffSize;
+  SpiState.txBuffIdx  = 0;
 
-  for(i = 0; i < buffSize; i++)
+  // Clear TX interrupt flag to avoid just to be sure its not set.
+  SpiaRegs.SPIFFTX.bit.TXFFINTCLR = 1;
+
+  // Fill in TX FIFO with data.
+  while(   (SpiaRegs.SPIFFTX.bit.TXFFST != 16)
+  		&& (SpiState.txBuffIdx < SpiState.BuffSize))
   {
-	while(SpiaRegs.SPIFFTX.bit.TXFFST == 0x10) {}
-	SpiaRegs.SPITXBUF = buff[i] << (16 - SPI_CHAR_BITS);
+	SpiaRegs.SPITXBUF = SpiState.Buff[SpiState.txBuffIdx++] << (16 - SPI_CHAR_BITS);
   }
 
-  return i;
+  // If there are still data in the buffer wait
+  // until interrupt driven transmit completed.
+  if(SpiState.txBuffIdx < SpiState.BuffSize)
+  {
+	SpiaRegs.SPIFFTX.bit.TXFFIENA   = 1;
+    xSemaphoreTake(SpiState.completeEvent, timeout);
+    SpiaRegs.SPIFFTX.bit.TXFFIENA   = 0;
+  }
+
+  return SpiState.txBuffIdx;
 }
 
 //-------------------------------------------------------------------------------------------------
 uint16_t SPI_receive(uint8_t* buff, uint16_t buffSize, TickType_t timeout)
 {
-  uint16_t i = 0;
+  // Init transmitter state.
+  SpiState.operation = SPI_RECEIVE;
+  SpiState.Buff      = buff;
+  SpiState.BuffSize  = buffSize;
+  SpiState.rxBuffIdx = 0;
+  SpiState.txBuffIdx = 0;
+
+  // Clear TX interrupt flag to avoid just to be sure its not set.
+  SpiaRegs.SPIFFTX.bit.TXFFINTCLR = 1;
+
+  // Fill in TX FIFO with dummy values.
+  while(   (SpiaRegs.SPIFFTX.bit.TXFFST != 16)
+   		&& (SpiState.txBuffIdx < SpiState.BuffSize))
+  {
+    SpiaRegs.SPITXBUF = RX_DUMMY_VALUE;
+    SpiState.txBuffIdx++;
+  }
   
-  return i;
+  // If buffer is larger than FIFO level wait
+  // until interrupt driven receive completed.
+  if(SpiState.txBuffIdx < SpiState.BuffSize)
+  {
+  	SpiaRegs.SPIFFTX.bit.TXFFIENA   = 1;
+    xSemaphoreTake(SpiState.completeEvent, timeout);
+    SpiaRegs.SPIFFTX.bit.TXFFIENA   = 0;
+  }
+
+  // Wait untill the rest of dummy values in TX FIFO is processed
+  // and read the result from RX FIFO.
+  while(SpiaRegs.SPIFFTX.bit.TXFFST != 0);
+  while(SpiaRegs.SPIFFRX.bit.RXFFST != 0)
+  {
+    SpiState.Buff[SpiState.rxBuffIdx++] = SpiaRegs.SPIRXBUF;
+  }
+
+  return SpiState.rxBuffIdx;
 }

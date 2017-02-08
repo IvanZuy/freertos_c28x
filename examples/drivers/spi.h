@@ -6,7 +6,7 @@
 
 void     SPI_open(void);
 void     SPI_close(void);
-uint16_t SPI_send(const uint8_t* buff, uint16_t buffSize);
+uint16_t SPI_send(uint8_t* buff, uint16_t buffSize, TickType_t timeout);
 uint16_t SPI_receive(uint8_t* buff, uint16_t buffSize, TickType_t timeout);
 
 #endif // __SPI_H__
