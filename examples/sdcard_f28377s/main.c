@@ -5,6 +5,7 @@
 #include "semphr.h"
 #include "uart.h"
 #include "spi.h"
+#include "SD.h"
 
 #define STACK_SIZE  256U
 #define RED         0xDEADBEAF
@@ -20,7 +21,8 @@ static StackType_t  blueTaskStack[STACK_SIZE];
 static StaticTask_t idleTaskBuffer;
 static StackType_t  idleTaskStack[STACK_SIZE];
 
-uint8_t sdata[128];
+#pragma DATA_SECTION(read_buffer, "ramgs0");
+uint16_t read_buffer[4096];
 //-------------------------------------------------------------------------------------------------
 void vApplicationStackOverflowHook( TaskHandle_t xTask, signed char *pcTaskName )
 {
@@ -96,11 +98,24 @@ void LED_TaskBlue(void * pvParameters)
 {
 	const char str[] = "Test UART task 1\n\r";
 
+	memset(read_buffer, 0, sizeof(read_buffer));
+
+	sd_card_insertion();
+	sd_initialization();
+
+	SPI_setClockFreq(10E6);
+
+	sd_read_register(SEND_CSD);		//Read CSD register
+	sd_read_register(READ_OCR);		//Read OCR register
+	sd_read_register(SEND_CID);		//Read CID register
+
     for(;;)
     {
-        ledToggle((uint32_t)pvParameters);
+//    	sd_read_block(0, read_buffer);
+    	sd_read_multiple_block(0, read_buffer, 8);
+
+    	ledToggle((uint32_t)pvParameters);
         UART_send((uint8_t*)str, strlen(str));
-        SPI_send(sdata, sizeof(sdata), 100 / portTICK_PERIOD_MS);
 
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
@@ -162,12 +177,6 @@ void main(void)
 
     UART_open();
     SPI_open();
-
-    uint8_t i;
-    for(i = 0; i < sizeof(sdata); i++)
-    {
-    	sdata[i] = i;
-    }
 
     // Enable global Interrupts and higher priority real-time debug events:
     EINT;  // Enable Global interrupt INTM

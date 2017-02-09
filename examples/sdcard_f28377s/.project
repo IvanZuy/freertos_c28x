@@ -41,6 +41,11 @@
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
+			<name>libs</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
 			<name>FreeRTOS/list.c</name>
 			<type>1</type>
 			<locationURI>PARENT-2-PROJECT_LOC/FreeRTOS/list.c</locationURI>
@@ -116,6 +121,11 @@
 			<locationURI>PARENT-1-PROJECT_LOC/drivers/uart.c</locationURI>
 		</link>
 		<link>
+			<name>libs/sdcard_spi</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
 			<name>FreeRTOS/port/porASM.asm</name>
 			<type>1</type>
 			<locationURI>PARENT-2-PROJECT_LOC/FreeRTOS/portable/CCS/c28x/porASM.asm</locationURI>
@@ -129,6 +139,26 @@
 			<name>FreeRTOS/port/portmacro.h</name>
 			<type>1</type>
 			<locationURI>PARENT-2-PROJECT_LOC/FreeRTOS/portable/CCS/c28x/portmacro.h</locationURI>
+		</link>
+		<link>
+			<name>libs/sdcard_spi/SD_SPI_Initialization.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/libs/sdcard_spi/SD_SPI_Initialization.c</locationURI>
+		</link>
+		<link>
+			<name>libs/sdcard_spi/SD_SPI_Read.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/libs/sdcard_spi/SD_SPI_Read.c</locationURI>
+		</link>
+		<link>
+			<name>libs/sdcard_spi/SD_SPI_Registers.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/libs/sdcard_spi/SD_SPI_Registers.c</locationURI>
+		</link>
+		<link>
+			<name>libs/sdcard_spi/SD_SPI_Transmission.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/libs/sdcard_spi/SD_SPI_Transmission.c</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

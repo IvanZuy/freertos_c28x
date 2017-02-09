@@ -6,7 +6,7 @@
 #include "semphr.h"
 
 //-------------------------------------------------------------------------------------------------
-#define SPI_BRR            ((200E6 / 4) / 5E6) - 1
+#define SPI_BRR(x)         ((200E6 / 4) / (x)) - 1
 #define SPI_CHAR_BITS      8
 #define TX_FIFO_INT_LVL    2
 #define RX_DUMMY_VALUE     0xBAAD
@@ -80,7 +80,6 @@ static void initPins(void)
   GpioCtrlRegs.GPBPUD.bit.GPIO58 = 0;  // Enable pull-up on GPIO58 (SPIA_MOSI)
   GpioCtrlRegs.GPBPUD.bit.GPIO59 = 0;  // Enable pull-up on GPIO59 (SPIA_MISO)
   GpioCtrlRegs.GPBPUD.bit.GPIO60 = 0;  // Enable pull-up on GPIO60 (SPIA_CLK)
-  GpioCtrlRegs.GPBPUD.bit.GPIO61 = 0;  // Enable pull-up on GPIO61 (SPIA_STE)
 
   // Set qualification for selected pins to asynch only
   GpioCtrlRegs.GPBQSEL2.bit.GPIO58 = 3;
@@ -95,10 +94,11 @@ static void initPins(void)
   GpioCtrlRegs.GPBMUX2.bit.GPIO59  = 3;	// Configure GPIO59 as SPIA_MISO
   GpioCtrlRegs.GPBGMUX2.bit.GPIO60 = 3;
   GpioCtrlRegs.GPBMUX2.bit.GPIO60  = 3;	// Configure GPIO60 as SPIA_CLK
-  GpioCtrlRegs.GPBGMUX2.bit.GPIO61 = 3;
-  GpioCtrlRegs.GPBMUX2.bit.GPIO61  = 3;	// Configure GPIO61 as SPIA_STE
 
   EDIS;
+
+  GPIO_SetupPinMux(61, GPIO_MUX_CPU1, 0);
+  GPIO_SetupPinOptions(61, GPIO_OUTPUT, GPIO_PUSHPULL);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -109,7 +109,7 @@ static void initSpia(void)
   // 16-bit character
   // Enable HS mode
   SpiaRegs.SPICCR.bit.SPISWRESET   = 0;
-  SpiaRegs.SPICCR.bit.CLKPOLARITY  = 0;
+  SpiaRegs.SPICCR.bit.CLKPOLARITY  = 1;
   SpiaRegs.SPICCR.bit.HS_MODE      = 1;
   SpiaRegs.SPICCR.bit.SPICHAR      = (SPI_CHAR_BITS-1);
 
@@ -143,7 +143,7 @@ static void initSpia(void)
   SpiaRegs.SPIFFCT.all = 0x0;
 
   // Set the baud rate
-  SpiaRegs.SPIBRR.bit.SPI_BIT_RATE = SPI_BRR;
+  SpiaRegs.SPIBRR.bit.SPI_BIT_RATE = SPI_BRR(400E3);
 
   // Set FREE bit
   // Halting on a breakpoint will not halt the SPI
@@ -175,6 +175,14 @@ void SPI_open(void)
 void SPI_close(void)
 {
 
+}
+
+//-------------------------------------------------------------------------------------------------
+uint16_t spi_sendByte(uint16_t byte)
+{
+  SpiaRegs.SPITXBUF = byte;         			//Transmit Byte
+  while(SpiaRegs.SPIFFRX.bit.RXFFST == 0); 	    //Wait until the RX FIFO has received one byte
+  return (SpiaRegs.SPIRXBUF << 8);			    //Read Byte from RXBUF and return
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -247,4 +255,22 @@ uint16_t SPI_receive(uint8_t* buff, uint16_t buffSize, TickType_t timeout)
   }
 
   return SpiState.rxBuffIdx;
+}
+
+//-------------------------------------------------------------------------------------------------
+void SPI_setCsHigh(void)
+{
+  GPIO_WritePin(61, 1);
+}
+
+//-------------------------------------------------------------------------------------------------
+void SPI_setCsLow(void)
+{
+  GPIO_WritePin(61, 0);
+}
+
+//-------------------------------------------------------------------------------------------------
+void SPI_setClockFreq(uint32_t freqHz)
+{
+  SpiaRegs.SPIBRR.bit.SPI_BIT_RATE = SPI_BRR(freqHz);
 }

@@ -48,10 +48,12 @@
 									<listOptionValue builtIn="false" value="&quot;${PROJECT_LOC}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${PROJECT_LOC}\..\..\FreeRTOS\include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${PROJECT_LOC}\..\drivers&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${PROJECT_LOC}\..\libs\sdcard_spi&quot;"/>
 								</option>
-								<option id="com.ti.ccstudio.buildDefinitions.C2000_15.12.compilerID.DEFINE.425852017" superClass="com.ti.ccstudio.buildDefinitions.C2000_15.12.compilerID.DEFINE" valueType="definedSymbols">
+								<option id="com.ti.ccstudio.buildDefinitions.C2000_15.12.compilerID.DEFINE.425852017" name="Pre-define NAME (--define, -D)" superClass="com.ti.ccstudio.buildDefinitions.C2000_15.12.compilerID.DEFINE" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="_LAUNCHXL_F28377S"/>
 								</option>
+								<option id="com.ti.ccstudio.buildDefinitions.C2000_15.12.compilerID.FP_MODE.847043652" superClass="com.ti.ccstudio.buildDefinitions.C2000_15.12.compilerID.FP_MODE" value="com.ti.ccstudio.buildDefinitions.C2000_15.12.compilerID.FP_MODE.relaxed" valueType="enumerated"/>
 								<inputType id="com.ti.ccstudio.buildDefinitions.C2000_15.12.compiler.inputType__C_SRCS.553449585" name="C Sources" superClass="com.ti.ccstudio.buildDefinitions.C2000_15.12.compiler.inputType__C_SRCS"/>
 								<inputType id="com.ti.ccstudio.buildDefinitions.C2000_15.12.compiler.inputType__CPP_SRCS.674476191" name="C++ Sources" superClass="com.ti.ccstudio.buildDefinitions.C2000_15.12.compiler.inputType__CPP_SRCS"/>
 								<inputType id="com.ti.ccstudio.buildDefinitions.C2000_15.12.compiler.inputType__ASM_SRCS.1859267773" name="Assembly Sources" superClass="com.ti.ccstudio.buildDefinitions.C2000_15.12.compiler.inputType__ASM_SRCS"/>
