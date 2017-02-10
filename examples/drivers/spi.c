@@ -6,12 +6,13 @@
 #include "semphr.h"
 
 //-------------------------------------------------------------------------------------------------
-#define CS_GPIO_PIN        61
-#define SPI_BRR(x)         ((200E6 / 4) / (x)) - 1
-#define SPI_BRR_FAST(x)    ((200E6) / (x)) - 1
-#define SPI_CHAR_BITS      8
-#define TX_FIFO_INT_LVL    2
-#define RX_DUMMY_VALUE     0xFFFF
+#define CS_GPIO_PIN          61
+#define SPI_BRR(x)           ((200E6 / 4) / (x)) - 1
+#define SPI_BRR_FAST(x)      ((200E6) / (x)) - 1
+#define SPI_CHAR_BITS        8
+#define SPI_CHAR_BITS_MASK   0x00FF 
+#define TX_FIFO_INT_LVL      2
+#define RX_DUMMY_VALUE       0xFFFF
 
 //-------------------------------------------------------------------------------------------------
 typedef enum {
@@ -37,7 +38,7 @@ __interrupt void spiTxFifo_ISR(void)
   if(SpiState.operation == SPI_TRANSMIT)
   {
     while(   (SpiaRegs.SPIFFTX.bit.TXFFST != 16)
-	      && (SpiState.txBuffIdx < SpiState.BuffSize))
+          && (SpiState.txBuffIdx < SpiState.BuffSize))
     {
       SpiaRegs.SPITXBUF = SpiState.Buff[SpiState.txBuffIdx++] << (16 - SPI_CHAR_BITS);
     }
@@ -49,17 +50,17 @@ __interrupt void spiTxFifo_ISR(void)
   }
   else
   {
-	while(SpiaRegs.SPIFFRX.bit.RXFFST != 0)
-	{
-	  SpiState.Buff[SpiState.rxBuffIdx++] = SpiaRegs.SPIRXBUF;
-	}
+    while(SpiaRegs.SPIFFRX.bit.RXFFST != 0)
+    {
+      SpiState.Buff[SpiState.rxBuffIdx++] = SpiaRegs.SPIRXBUF & SPI_CHAR_BITS_MASK;
+    }
 
     while(   (SpiaRegs.SPIFFTX.bit.TXFFST != 16)
-	      && (SpiState.txBuffIdx < SpiState.BuffSize))
-	{
-	  SpiaRegs.SPITXBUF = RX_DUMMY_VALUE;
-	  SpiState.txBuffIdx++;
-	}
+          && (SpiState.txBuffIdx < SpiState.BuffSize))
+    {
+      SpiaRegs.SPITXBUF = RX_DUMMY_VALUE;
+      SpiState.txBuffIdx++;
+    }
 
     if(SpiState.txBuffIdx == SpiState.BuffSize)
     {
@@ -92,11 +93,11 @@ static void initPins(void)
 
   //Configure SPI-A pins using GPIO regs
   GpioCtrlRegs.GPBGMUX2.bit.GPIO58 = 3;
-  GpioCtrlRegs.GPBMUX2.bit.GPIO58  = 3;	// Configure GPIO58 as SPIA_MOSI
+  GpioCtrlRegs.GPBMUX2.bit.GPIO58  = 3; // Configure GPIO58 as SPIA_MOSI
   GpioCtrlRegs.GPBGMUX2.bit.GPIO59 = 3;
-  GpioCtrlRegs.GPBMUX2.bit.GPIO59  = 3;	// Configure GPIO59 as SPIA_MISO
+  GpioCtrlRegs.GPBMUX2.bit.GPIO59  = 3; // Configure GPIO59 as SPIA_MISO
   GpioCtrlRegs.GPBGMUX2.bit.GPIO60 = 3;
-  GpioCtrlRegs.GPBMUX2.bit.GPIO60  = 3;	// Configure GPIO60 as SPIA_CLK
+  GpioCtrlRegs.GPBMUX2.bit.GPIO60  = 3; // Configure GPIO60 as SPIA_CLK
 
   EDIS;
 
@@ -183,9 +184,9 @@ void SPI_close(void)
 //-------------------------------------------------------------------------------------------------
 uint16_t SPI_sendByte(uint16_t byte)
 {
-  SpiaRegs.SPITXBUF = byte;         			//Transmit Byte
-  while(SpiaRegs.SPIFFRX.bit.RXFFST == 0); 	    //Wait until the RX FIFO has received one byte
-  return (SpiaRegs.SPIRXBUF << 8);			    //Read Byte from RXBUF and return
+  SpiaRegs.SPITXBUF = byte;                     //Transmit Byte
+  while(SpiaRegs.SPIFFRX.bit.RXFFST == 0);      //Wait until the RX FIFO has received one byte
+  return (SpiaRegs.SPIRXBUF << 8);              //Read Byte from RXBUF and return
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -202,16 +203,16 @@ uint16_t SPI_send(uint8_t* buff, uint16_t buffSize, TickType_t timeout)
 
   // Fill in TX FIFO with data.
   while(   (SpiaRegs.SPIFFTX.bit.TXFFST != 16)
-  		&& (SpiState.txBuffIdx < SpiState.BuffSize))
+        && (SpiState.txBuffIdx < SpiState.BuffSize))
   {
-	SpiaRegs.SPITXBUF = SpiState.Buff[SpiState.txBuffIdx++] << (16 - SPI_CHAR_BITS);
+    SpiaRegs.SPITXBUF = SpiState.Buff[SpiState.txBuffIdx++] << (16 - SPI_CHAR_BITS);
   }
 
   // If there are still data in the buffer wait
   // until interrupt driven transmit completed.
   if(SpiState.txBuffIdx < SpiState.BuffSize)
   {
-	SpiaRegs.SPIFFTX.bit.TXFFIENA   = 1;
+    SpiaRegs.SPIFFTX.bit.TXFFIENA   = 1;
     xSemaphoreTake(SpiState.completeEvent, timeout);
   }
 
@@ -233,7 +234,7 @@ uint16_t SPI_receive(uint8_t* buff, uint16_t buffSize, TickType_t timeout)
 
   // Fill in TX FIFO with dummy values.
   while(   (SpiaRegs.SPIFFTX.bit.TXFFST != 16)
-   		&& (SpiState.txBuffIdx < SpiState.BuffSize))
+        && (SpiState.txBuffIdx < SpiState.BuffSize))
   {
     SpiaRegs.SPITXBUF = RX_DUMMY_VALUE;
     SpiState.txBuffIdx++;
@@ -243,7 +244,7 @@ uint16_t SPI_receive(uint8_t* buff, uint16_t buffSize, TickType_t timeout)
   // until interrupt driven receive completed.
   if(SpiState.txBuffIdx < SpiState.BuffSize)
   {
-  	SpiaRegs.SPIFFTX.bit.TXFFIENA   = 1;
+    SpiaRegs.SPIFFTX.bit.TXFFIENA   = 1;
     xSemaphoreTake(SpiState.completeEvent, timeout);
   }
 
@@ -252,7 +253,7 @@ uint16_t SPI_receive(uint8_t* buff, uint16_t buffSize, TickType_t timeout)
   while(SpiaRegs.SPIFFTX.bit.TXFFST != 0);
   while(SpiaRegs.SPIFFRX.bit.RXFFST != 0)
   {
-    SpiState.Buff[SpiState.rxBuffIdx++] = SpiaRegs.SPIRXBUF;
+    SpiState.Buff[SpiState.rxBuffIdx++] = SpiaRegs.SPIRXBUF & SPI_CHAR_BITS_MASK;
   }
 
   return SpiState.rxBuffIdx;
