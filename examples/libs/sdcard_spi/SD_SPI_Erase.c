@@ -76,7 +76,7 @@ void sd_erase_block(Uint16 starting_sector, Uint16 total_sectors)
 	spi_xmit_command(ERASE_WR_BLK_START_ADDR, starting_sector, DUMMY_CRC);
 	
 	RESET_RESPONSE;					//Reset response 
-	while(response != SUCCESS)		//Wait until card responds with SUCCESS response
+	while(response != STATUS_SUCCESS)		//Wait until card responds with SUCCESS response
 		sd_command_response();
 
 	//After receiving response clock must be active for 8 clock cycles
@@ -89,7 +89,7 @@ void sd_erase_block(Uint16 starting_sector, Uint16 total_sectors)
 	spi_xmit_command(ERASE_WR_BLK_END_ADDR, total_sectors, DUMMY_CRC);
 	
 	RESET_RESPONSE;					//Reset response
-	while(response != SUCCESS)		//Wait until card responds with SUCCESS response
+	while(response != STATUS_SUCCESS)		//Wait until card responds with SUCCESS response
 		sd_command_response();
 
 	//After receiving response clock must be active for 8 clock cycles
@@ -99,7 +99,7 @@ void sd_erase_block(Uint16 starting_sector, Uint16 total_sectors)
 	spi_xmit_command(ERASE, STUFF_BITS, DUMMY_CRC);
 	
 	RESET_RESPONSE;					//Reset response	
-	while(response != SUCCESS)		//Wait until card responds with SUCCESS response
+	while(response != STATUS_SUCCESS)		//Wait until card responds with SUCCESS response
 		sd_command_response();
 
 	//Card will respond with the DATA OUT line pulled low if the card is still busy

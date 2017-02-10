@@ -76,7 +76,7 @@ void sd_write_block(Uint16 sector, Uint16 *pBuffer)
 	spi_xmit_command(WRITE_BLOCK, sector, DUMMY_CRC);
 
 	RESET_RESPONSE;					//Reset response
-	while(response != SUCCESS)		//Wait until card responds with SUCCESS response
+	while(response != STATUS_SUCCESS)		//Wait until card responds with SUCCESS response
 		sd_command_response();
 
 	//After receiving response clock must be active for 8 clock cycles
@@ -108,7 +108,7 @@ void sd_write_multiple_block(Uint16 sector, Uint16 *pBuffer, Uint16 total_sector
 	spi_xmit_command(WRITE_MULTIPLE_BLOCK, sector, DUMMY_CRC);
 
 	RESET_RESPONSE;					//Reset response
-	while(response != SUCCESS)		//Wait until card responds with SUCCESS response
+	while(response != STATUS_SUCCESS)		//Wait until card responds with SUCCESS response
 		sd_command_response();
 
 	//After receiving response clock must be active for 8 clock cycles

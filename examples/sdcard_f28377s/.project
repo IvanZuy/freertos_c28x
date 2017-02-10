@@ -141,6 +141,11 @@
 			<locationURI>PARENT-2-PROJECT_LOC/FreeRTOS/portable/CCS/c28x/portmacro.h</locationURI>
 		</link>
 		<link>
+			<name>libs/sdcard_spi/SD_SPI_Erase.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/libs/sdcard_spi/SD_SPI_Erase.c</locationURI>
+		</link>
+		<link>
 			<name>libs/sdcard_spi/SD_SPI_Initialization.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/libs/sdcard_spi/SD_SPI_Initialization.c</locationURI>
@@ -159,6 +164,11 @@
 			<name>libs/sdcard_spi/SD_SPI_Transmission.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/libs/sdcard_spi/SD_SPI_Transmission.c</locationURI>
+		</link>
+		<link>
+			<name>libs/sdcard_spi/SD_SPI_Write.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/libs/sdcard_spi/SD_SPI_Write.c</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>
