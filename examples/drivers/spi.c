@@ -6,10 +6,12 @@
 #include "semphr.h"
 
 //-------------------------------------------------------------------------------------------------
+#define CS_GPIO_PIN        61
 #define SPI_BRR(x)         ((200E6 / 4) / (x)) - 1
+#define SPI_BRR_FAST(x)    ((200E6) / (x)) - 1
 #define SPI_CHAR_BITS      8
 #define TX_FIFO_INT_LVL    2
-#define RX_DUMMY_VALUE     0xBAAD
+#define RX_DUMMY_VALUE     0xFFFF
 
 //-------------------------------------------------------------------------------------------------
 typedef enum {
@@ -47,6 +49,11 @@ __interrupt void spiTxFifo_ISR(void)
   }
   else
   {
+	while(SpiaRegs.SPIFFRX.bit.RXFFST != 0)
+	{
+	  SpiState.Buff[SpiState.rxBuffIdx++] = SpiaRegs.SPIRXBUF;
+	}
+
     while(   (SpiaRegs.SPIFFTX.bit.TXFFST != 16)
 	      && (SpiState.txBuffIdx < SpiState.BuffSize))
 	{
@@ -54,13 +61,9 @@ __interrupt void spiTxFifo_ISR(void)
 	  SpiState.txBuffIdx++;
 	}
 
-    while(SpiaRegs.SPIFFRX.bit.RXFFST != 0)
-    {
-      SpiState.Buff[SpiState.rxBuffIdx++] = SpiaRegs.SPIRXBUF;
-    }
-
     if(SpiState.txBuffIdx == SpiState.BuffSize)
     {
+      SpiaRegs.SPIFFTX.bit.TXFFIENA = 0;
       xSemaphoreGiveFromISR(SpiState.completeEvent, &xHigherPriorityTaskWoken);
     }
   }
@@ -178,7 +181,7 @@ void SPI_close(void)
 }
 
 //-------------------------------------------------------------------------------------------------
-uint16_t spi_sendByte(uint16_t byte)
+uint16_t SPI_sendByte(uint16_t byte)
 {
   SpiaRegs.SPITXBUF = byte;         			//Transmit Byte
   while(SpiaRegs.SPIFFRX.bit.RXFFST == 0); 	    //Wait until the RX FIFO has received one byte
@@ -210,7 +213,6 @@ uint16_t SPI_send(uint8_t* buff, uint16_t buffSize, TickType_t timeout)
   {
 	SpiaRegs.SPIFFTX.bit.TXFFIENA   = 1;
     xSemaphoreTake(SpiState.completeEvent, timeout);
-    SpiaRegs.SPIFFTX.bit.TXFFIENA   = 0;
   }
 
   return SpiState.txBuffIdx;
@@ -243,7 +245,6 @@ uint16_t SPI_receive(uint8_t* buff, uint16_t buffSize, TickType_t timeout)
   {
   	SpiaRegs.SPIFFTX.bit.TXFFIENA   = 1;
     xSemaphoreTake(SpiState.completeEvent, timeout);
-    SpiaRegs.SPIFFTX.bit.TXFFIENA   = 0;
   }
 
   // Wait untill the rest of dummy values in TX FIFO is processed
@@ -260,17 +261,24 @@ uint16_t SPI_receive(uint8_t* buff, uint16_t buffSize, TickType_t timeout)
 //-------------------------------------------------------------------------------------------------
 void SPI_setCsHigh(void)
 {
-  GPIO_WritePin(61, 1);
+  GPIO_WritePin(CS_GPIO_PIN, 1);
 }
 
 //-------------------------------------------------------------------------------------------------
 void SPI_setCsLow(void)
 {
-  GPIO_WritePin(61, 0);
+  GPIO_WritePin(CS_GPIO_PIN, 0);
 }
 
 //-------------------------------------------------------------------------------------------------
 void SPI_setClockFreq(uint32_t freqHz)
 {
-  SpiaRegs.SPIBRR.bit.SPI_BIT_RATE = SPI_BRR(freqHz);
+  if(ClkCfgRegs.LOSPCP.all == 0)
+  {
+    SpiaRegs.SPIBRR.bit.SPI_BIT_RATE = SPI_BRR_FAST(freqHz);
+  }
+  else
+  {
+    SpiaRegs.SPIBRR.bit.SPI_BIT_RATE = SPI_BRR(freqHz);
+  }
 }
