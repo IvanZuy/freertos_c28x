@@ -108,7 +108,7 @@
 		<link>
 			<name>controlSUITE/F2837xS_SysCtrl.c</name>
 			<type>1</type>
-			<locationURI>TI_PRODUCTS_DIR/controlSUITE/device_support/F2837xS/v200/F2837xS_common/source/F2837xS_SysCtrl.c</locationURI>
+			<locationURI>PARENT-5-PROJECT_LOC/ti/controlSUITE/device_support/F2837xS/v210/F2837xS_common/source/F2837xS_SysCtrl.c</locationURI>
 		</link>
 		<link>
 			<name>drivers/spi.c</name>

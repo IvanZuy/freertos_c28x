@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include "F28x_Project.h"     // Device Headerfile and Examples Include File
 #include "FreeRTOS.h"
@@ -9,10 +10,11 @@
 #include "ff.h"
 #include "diskio.h"
 
-#define STACK_SIZE  256U
-#define RED         0xDEADBEAF
-#define BLUE        0xBAADF00D
-#define RX_BUFF_SIZE 10
+#define STACK_SIZE       1024U
+#define STACK_SIZE_IDLE  256U
+#define RED              0xDEADBEAF
+#define BLUE             0xBAADF00D
+#define RX_BUFF_SIZE     10
 
 static StaticTask_t redTaskBuffer;
 static StackType_t  redTaskStack[STACK_SIZE];
@@ -21,7 +23,7 @@ static StaticTask_t blueTaskBuffer;
 static StackType_t  blueTaskStack[STACK_SIZE];
 
 static StaticTask_t idleTaskBuffer;
-static StackType_t  idleTaskStack[STACK_SIZE];
+static StackType_t  idleTaskStack[STACK_SIZE_IDLE];
 
 #pragma DATA_SECTION(fatFs, "ramgs0");
 #pragma DATA_SECTION(fil, "ramgs0");
@@ -29,6 +31,14 @@ static StackType_t  idleTaskStack[STACK_SIZE];
 FATFS    fatFs;
 FIL      fil;
 uint16_t buff[512];
+
+//-------------------------------------------------------------------------------------------------
+void int2str(uint32_t value, char* str, uint16_t strSize)
+{
+
+
+
+}
 
 //-------------------------------------------------------------------------------------------------
 void vApplicationStackOverflowHook( TaskHandle_t xTask, signed char *pcTaskName )
@@ -94,7 +104,7 @@ void LED_TaskRed(void * pvParameters)
         br = UART_receive(buffer, RX_BUFF_SIZE, 100 / portTICK_PERIOD_MS);
         if(br > 0)
         {
-            ledToggle((uint32_t)pvParameters);
+//            ledToggle((uint32_t)pvParameters);
             UART_send(buffer, br);
         }
     }
@@ -103,10 +113,10 @@ void LED_TaskRed(void * pvParameters)
 //-------------------------------------------------------------------------------------------------
 void LED_TaskBlue(void * pvParameters)
 {
-	const char str[] = "Test UART task 1\n\r";
 	FRESULT    fresult;
 	uint32_t   br;
 	uint32_t   totalBytesRead;
+	TickType_t timeElapsed;
 
 	sd_card_insertion();
 	sd_initialization();
@@ -119,8 +129,10 @@ void LED_TaskBlue(void * pvParameters)
 
   for(;;)
   {
+    GPIO_WritePin(12, 1);
     disk_initialize(0);
     fresult = f_mount(&fatFs, "", 1);
+    GPIO_WritePin(12, 0);
 
     if(fresult == FR_OK)
     {
@@ -128,11 +140,21 @@ void LED_TaskBlue(void * pvParameters)
       if(fresult == FR_OK)
       {
         totalBytesRead = 0;
+        timeElapsed = xTaskGetTickCount();
+
         do
         {
           fresult = f_read(&fil, buff, sizeof(buff), &br);
           totalBytesRead += br;
         }while((fresult == FR_OK) && (br == sizeof(buff)));
+
+        timeElapsed = xTaskGetTickCount() - timeElapsed;
+        snprintf((char*)buff, sizeof(buff),
+                 "BR: %lu in %lu mS, %lu Kb/sec\n\r",
+                 totalBytesRead,
+                 timeElapsed,
+                 totalBytesRead/timeElapsed);
+        UART_send(buff, strlen(buff));
 
         f_close(&fil);
       }
@@ -140,8 +162,6 @@ void LED_TaskBlue(void * pvParameters)
     }
 
     ledToggle((uint32_t)pvParameters);
-    UART_send((uint8_t*)str, strlen(str));
-
     vTaskDelay(100 / portTICK_PERIOD_MS);
   }
 }
@@ -149,9 +169,9 @@ void LED_TaskBlue(void * pvParameters)
 //-------------------------------------------------------------------------------------------------
 void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize )
 {
-    *ppxIdleTaskTCBBuffer = &idleTaskBuffer;
+    *ppxIdleTaskTCBBuffer   = &idleTaskBuffer;
     *ppxIdleTaskStackBuffer = idleTaskStack;
-    *pulIdleTaskStackSize = STACK_SIZE;
+    *pulIdleTaskStackSize   = STACK_SIZE_IDLE;
 }
 
 //-------------------------------------------------------------------------------------------------

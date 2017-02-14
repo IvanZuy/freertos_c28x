@@ -31,6 +31,7 @@ static struct {
 }SpiState;
 
 //-------------------------------------------------------------------------------------------------
+__attribute__((ramfunc))
 __interrupt void spiTxFifo_ISR(void)
 {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -194,6 +195,7 @@ uint16_t SPI_sendByte(uint16_t byte)
 }
 
 //-------------------------------------------------------------------------------------------------
+__attribute__((ramfunc))
 uint16_t SPI_send(uint8_t* buff, uint16_t buffSize, TickType_t timeout)
 {
   // Init transmitter state.
@@ -224,6 +226,7 @@ uint16_t SPI_send(uint8_t* buff, uint16_t buffSize, TickType_t timeout)
 }
 
 //-------------------------------------------------------------------------------------------------
+__attribute__((ramfunc))
 uint16_t SPI_receive(uint8_t* buff, uint16_t buffSize, TickType_t timeout)
 {
   // Init transmitter state.
