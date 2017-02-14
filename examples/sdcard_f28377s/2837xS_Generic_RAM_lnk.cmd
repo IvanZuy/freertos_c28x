@@ -7,11 +7,7 @@ PAGE 0 :
    BEGIN           	: origin = 0x000000, length = 0x000002
    RAMM0           	: origin = 0x000122, length = 0x0002DE
    RAMD0           	: origin = 0x00B000, length = 0x000800
-   RAMLS0          	: origin = 0x008000, length = 0x000800
-   RAMLS1          	: origin = 0x008800, length = 0x000800
-   RAMLS2      		: origin = 0x009000, length = 0x000800
-   RAMLS3      		: origin = 0x009800, length = 0x000800
-   RAMLS4      		: origin = 0x00A000, length = 0x000800
+   RAMLS          	: origin = 0x008000, length = 0x002800
    RESET           	: origin = 0x3FFFC0, length = 0x000002
 
 PAGE 1 :
@@ -45,7 +41,7 @@ SECTIONS
 {
    codestart        : > BEGIN,     PAGE = 0
    ramfuncs         : > RAMM0      PAGE = 0
-   .text            : >>RAMM0 | RAMD0 |  RAMLS0 | RAMLS1 | RAMLS2 | RAMLS3 | RAMLS4,   PAGE = 0
+   .text            : >> RAMM0 | RAMD0 |  RAMLS,   PAGE = 0
    .cinit           : > RAMM0,     PAGE = 0
    .pinit           : > RAMM0,     PAGE = 0
    .switch          : > RAMM0,     PAGE = 0

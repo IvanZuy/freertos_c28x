@@ -121,6 +121,11 @@
 			<locationURI>PARENT-1-PROJECT_LOC/drivers/uart.c</locationURI>
 		</link>
 		<link>
+			<name>libs/FatFs</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
 			<name>libs/sdcard_spi</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
@@ -139,6 +144,16 @@
 			<name>FreeRTOS/port/portmacro.h</name>
 			<type>1</type>
 			<locationURI>PARENT-2-PROJECT_LOC/FreeRTOS/portable/CCS/c28x/portmacro.h</locationURI>
+		</link>
+		<link>
+			<name>libs/FatFs/diskio.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/libs/fatfs/diskio.c</locationURI>
+		</link>
+		<link>
+			<name>libs/FatFs/ff.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/libs/fatfs/ff.c</locationURI>
 		</link>
 		<link>
 			<name>libs/sdcard_spi/SD_SPI_Erase.c</name>

@@ -60,6 +60,10 @@ __interrupt void spiTxFifo_ISR(void)
     {
       SpiaRegs.SPITXBUF = RX_DUMMY_VALUE;
       SpiState.txBuffIdx++;
+      if(SpiaRegs.SPIFFRX.bit.RXFFST != 0)
+      {
+        SpiState.Buff[SpiState.rxBuffIdx++] = SpiaRegs.SPIRXBUF & SPI_CHAR_BITS_MASK;
+      }
     }
 
     if(SpiState.txBuffIdx == SpiState.BuffSize)
@@ -184,7 +188,7 @@ void SPI_close(void)
 //-------------------------------------------------------------------------------------------------
 uint16_t SPI_sendByte(uint16_t byte)
 {
-  SpiaRegs.SPITXBUF = byte;                     //Transmit Byte
+  SpiaRegs.SPITXBUF        = byte;              //Transmit Byte
   while(SpiaRegs.SPIFFRX.bit.RXFFST == 0);      //Wait until the RX FIFO has received one byte
   return (SpiaRegs.SPIRXBUF << 8);              //Read Byte from RXBUF and return
 }
@@ -238,8 +242,13 @@ uint16_t SPI_receive(uint8_t* buff, uint16_t buffSize, TickType_t timeout)
   {
     SpiaRegs.SPITXBUF = RX_DUMMY_VALUE;
     SpiState.txBuffIdx++;
+
+    if(SpiaRegs.SPIFFRX.bit.RXFFST != 0)
+    {
+      SpiState.Buff[SpiState.rxBuffIdx++] = SpiaRegs.SPIRXBUF & SPI_CHAR_BITS_MASK;
+    }
   }
-  
+
   // If buffer is larger than FIFO level wait
   // until interrupt driven receive completed.
   if(SpiState.txBuffIdx < SpiState.BuffSize)

@@ -6,6 +6,8 @@
 #include "uart.h"
 #include "spi.h"
 #include "SD.h"
+#include "ff.h"
+#include "diskio.h"
 
 #define STACK_SIZE  256U
 #define RED         0xDEADBEAF
@@ -21,8 +23,13 @@ static StackType_t  blueTaskStack[STACK_SIZE];
 static StaticTask_t idleTaskBuffer;
 static StackType_t  idleTaskStack[STACK_SIZE];
 
-#pragma DATA_SECTION(read_buffer, "ramgs0");
-uint16_t read_buffer[4096];
+#pragma DATA_SECTION(fatFs, "ramgs0");
+#pragma DATA_SECTION(fil, "ramgs0");
+#pragma DATA_SECTION(buff, "ramgs0");
+FATFS    fatFs;
+FIL      fil;
+uint16_t buff[512];
+
 //-------------------------------------------------------------------------------------------------
 void vApplicationStackOverflowHook( TaskHandle_t xTask, signed char *pcTaskName )
 {
@@ -97,8 +104,9 @@ void LED_TaskRed(void * pvParameters)
 void LED_TaskBlue(void * pvParameters)
 {
 	const char str[] = "Test UART task 1\n\r";
-
-	memset(read_buffer, 0, sizeof(read_buffer));
+	FRESULT    fresult;
+	uint32_t   br;
+	uint32_t   totalBytesRead;
 
 	sd_card_insertion();
 	sd_initialization();
@@ -109,16 +117,33 @@ void LED_TaskBlue(void * pvParameters)
 	sd_read_register(READ_OCR);		//Read OCR register
 	sd_read_register(SEND_CID);		//Read CID register
 
-    for(;;)
+  for(;;)
+  {
+    disk_initialize(0);
+    fresult = f_mount(&fatFs, "", 1);
+
+    if(fresult == FR_OK)
     {
-//    	sd_read_block(0, read_buffer);
-    	sd_read_multiple_block(0, read_buffer, 8);
+      fresult = f_open(&fil, "test1.bin", FA_READ);
+      if(fresult == FR_OK)
+      {
+        totalBytesRead = 0;
+        do
+        {
+          fresult = f_read(&fil, buff, sizeof(buff), &br);
+          totalBytesRead += br;
+        }while((fresult == FR_OK) && (br == sizeof(buff)));
 
-    	ledToggle((uint32_t)pvParameters);
-        UART_send((uint8_t*)str, strlen(str));
-
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        f_close(&fil);
+      }
+      f_mount(NULL, "", 1);
     }
+
+    ledToggle((uint32_t)pvParameters);
+    UART_send((uint8_t*)str, strlen(str));
+
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+  }
 }
 
 //-------------------------------------------------------------------------------------------------
