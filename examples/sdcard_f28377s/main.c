@@ -121,7 +121,7 @@ void LED_TaskBlue(void * pvParameters)
 	sd_card_insertion();
 	sd_initialization();
 
-	SPI_setClockFreq(10E6);
+	SPI_setClockFreq(1E6);
 
 	sd_read_register(SEND_CSD);		//Read CSD register
 	sd_read_register(READ_OCR);		//Read OCR register

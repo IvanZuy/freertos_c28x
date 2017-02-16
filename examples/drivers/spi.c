@@ -15,72 +15,6 @@
 #define RX_DUMMY_VALUE       0xFFFF
 
 //-------------------------------------------------------------------------------------------------
-typedef enum {
-  SPI_TRANSMIT,
-  SPI_RECEIVE,
-}SpiOperation_E;
-
-static struct {
-  SpiOperation_E    operation;
-  uint8_t*          Buff;
-  uint16_t          BuffSize;
-  uint16_t          txBuffIdx;
-  uint16_t          rxBuffIdx;
-  SemaphoreHandle_t completeEvent;
-  StaticSemaphore_t completeEventBuffer;
-}SpiState;
-
-//-------------------------------------------------------------------------------------------------
-__attribute__((ramfunc))
-__interrupt void spiTxFifo_ISR(void)
-{
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-  if(SpiState.operation == SPI_TRANSMIT)
-  {
-    while(   (SpiaRegs.SPIFFTX.bit.TXFFST != 16)
-          && (SpiState.txBuffIdx < SpiState.BuffSize))
-    {
-      SpiaRegs.SPITXBUF = SpiState.Buff[SpiState.txBuffIdx++] << (16 - SPI_CHAR_BITS);
-    }
-
-    if(SpiState.txBuffIdx == SpiState.BuffSize)
-    {
-      xSemaphoreGiveFromISR(SpiState.completeEvent, &xHigherPriorityTaskWoken);
-    }
-  }
-  else
-  {
-    while(SpiaRegs.SPIFFRX.bit.RXFFST != 0)
-    {
-      SpiState.Buff[SpiState.rxBuffIdx++] = SpiaRegs.SPIRXBUF & SPI_CHAR_BITS_MASK;
-    }
-
-    while(   (SpiaRegs.SPIFFTX.bit.TXFFST != 16)
-          && (SpiState.txBuffIdx < SpiState.BuffSize))
-    {
-      SpiaRegs.SPITXBUF = RX_DUMMY_VALUE;
-      SpiState.txBuffIdx++;
-      if(SpiaRegs.SPIFFRX.bit.RXFFST != 0)
-      {
-        SpiState.Buff[SpiState.rxBuffIdx++] = SpiaRegs.SPIRXBUF & SPI_CHAR_BITS_MASK;
-      }
-    }
-
-    if(SpiState.txBuffIdx == SpiState.BuffSize)
-    {
-      SpiaRegs.SPIFFTX.bit.TXFFIENA = 0;
-      xSemaphoreGiveFromISR(SpiState.completeEvent, &xHigherPriorityTaskWoken);
-    }
-  }
-
-  SpiaRegs.SPIFFTX.bit.TXFFINTCLR = 1;  // Clear Interrupt flag
-  PieCtrlRegs.PIEACK.all |= 0x20;       // Issue PIE ACK
-
-  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-}
-
-//-------------------------------------------------------------------------------------------------
 static void initPins(void)
 {
   EALLOW;
@@ -158,14 +92,6 @@ static void initSpia(void)
   // Halting on a breakpoint will not halt the SPI
   SpiaRegs.SPIPRI.bit.FREE = 1;
 
-  // Configure interrupts
-  EALLOW;
-  PieVectTable.SPIA_TX_INT = &spiTxFifo_ISR;
-  EDIS;
-  PieCtrlRegs.PIECTRL.bit.ENPIE = 1;     // Enable the PIE block
-  PieCtrlRegs.PIEIER6.bit.INTx2 = 1;     // Enable PIE Group 6, INT 2
-  IER=M_INT6;                            // Enable CPU INT6
-
   // Release the SPI from reset
   SpiaRegs.SPICCR.bit.SPISWRESET = 1;
 }
@@ -173,9 +99,6 @@ static void initSpia(void)
 //-------------------------------------------------------------------------------------------------
 void SPI_open(void)
 {
-  // Init OS primitives.
-  SpiState.completeEvent = xSemaphoreCreateBinaryStatic(&SpiState.completeEventBuffer);
-
   initPins();
   initSpia();
 }
@@ -187,88 +110,64 @@ void SPI_close(void)
 }
 
 //-------------------------------------------------------------------------------------------------
+__attribute__((ramfunc))
 uint16_t SPI_sendByte(uint16_t byte)
 {
-  SpiaRegs.SPITXBUF        = byte;              //Transmit Byte
-  while(SpiaRegs.SPIFFRX.bit.RXFFST == 0);      //Wait until the RX FIFO has received one byte
-  return (SpiaRegs.SPIRXBUF << 8);              //Read Byte from RXBUF and return
+  SpiaRegs.SPITXBUF        = byte;         //Transmit Byte
+  while(SpiaRegs.SPIFFRX.bit.RXFFST == 0); //Wait until the RX FIFO has received one byte
+  return (SpiaRegs.SPIRXBUF << (16 - SPI_CHAR_BITS)); //Read Byte from RXBUF and return
 }
 
 //-------------------------------------------------------------------------------------------------
 __attribute__((ramfunc))
 uint16_t SPI_send(uint8_t* buff, uint16_t buffSize, TickType_t timeout)
 {
-  // Init transmitter state.
-  SpiState.operation  = SPI_TRANSMIT;
-  SpiState.Buff       = buff;
-  SpiState.BuffSize   = buffSize;
-  SpiState.txBuffIdx  = 0;
+  uint8_t* Buff      = buff;
+  uint16_t BuffSize  = buffSize;
+  uint16_t txBuffIdx = 0;
 
-  // Clear TX interrupt flag to avoid just to be sure its not set.
-  SpiaRegs.SPIFFTX.bit.TXFFINTCLR = 1;
-
-  // Fill in TX FIFO with data.
-  while(   (SpiaRegs.SPIFFTX.bit.TXFFST != 16)
-        && (SpiState.txBuffIdx < SpiState.BuffSize))
+  // Send buffer to SPI bus
+  while(txBuffIdx < BuffSize)
   {
-    SpiaRegs.SPITXBUF = SpiState.Buff[SpiState.txBuffIdx++] << (16 - SPI_CHAR_BITS);
+    if(SpiaRegs.SPIFFTX.bit.TXFFST != 16)
+    {
+      SpiaRegs.SPITXBUF = Buff[txBuffIdx++] << (16 - SPI_CHAR_BITS);
+    }
   }
 
-  // If there are still data in the buffer wait
-  // until interrupt driven transmit completed.
-  if(SpiState.txBuffIdx < SpiState.BuffSize)
-  {
-    SpiaRegs.SPIFFTX.bit.TXFFIENA   = 1;
-    xSemaphoreTake(SpiState.completeEvent, timeout);
-  }
-
-  return SpiState.txBuffIdx;
+  return txBuffIdx;
 }
 
 //-------------------------------------------------------------------------------------------------
 __attribute__((ramfunc))
 uint16_t SPI_receive(uint8_t* buff, uint16_t buffSize, TickType_t timeout)
 {
-  // Init transmitter state.
-  SpiState.operation = SPI_RECEIVE;
-  SpiState.Buff      = buff;
-  SpiState.BuffSize  = buffSize;
-  SpiState.rxBuffIdx = 0;
-  SpiState.txBuffIdx = 0;
+  uint8_t* Buff      = buff;
+  uint16_t BuffSize  = buffSize;
+  uint16_t txBuffIdx = 0;
+  uint16_t rxBuffIdx = 0;
 
-  // Clear TX interrupt flag to avoid just to be sure its not set.
-  SpiaRegs.SPIFFTX.bit.TXFFINTCLR = 1;
-
-  // Fill in TX FIFO with dummy values.
-  while(   (SpiaRegs.SPIFFTX.bit.TXFFST != 16)
-        && (SpiState.txBuffIdx < SpiState.BuffSize))
+  while(txBuffIdx < BuffSize)
   {
-    SpiaRegs.SPITXBUF = RX_DUMMY_VALUE;
-    SpiState.txBuffIdx++;
-
-    if(SpiaRegs.SPIFFRX.bit.RXFFST != 0)
+    if(SpiaRegs.SPIFFTX.bit.TXFFST != 16)
     {
-      SpiState.Buff[SpiState.rxBuffIdx++] = SpiaRegs.SPIRXBUF & SPI_CHAR_BITS_MASK;
+      SpiaRegs.SPITXBUF = RX_DUMMY_VALUE;
+      txBuffIdx++;
+    }
+
+    while(SpiaRegs.SPIFFRX.bit.RXFFST != 0)
+    {
+      Buff[rxBuffIdx++] = SpiaRegs.SPIRXBUF & SPI_CHAR_BITS_MASK;
     }
   }
 
-  // If buffer is larger than FIFO level wait
-  // until interrupt driven receive completed.
-  if(SpiState.txBuffIdx < SpiState.BuffSize)
-  {
-    SpiaRegs.SPIFFTX.bit.TXFFIENA   = 1;
-    xSemaphoreTake(SpiState.completeEvent, timeout);
-  }
-
-  // Wait untill the rest of dummy values in TX FIFO is processed
-  // and read the result from RX FIFO.
   while(SpiaRegs.SPIFFTX.bit.TXFFST != 0);
   while(SpiaRegs.SPIFFRX.bit.RXFFST != 0)
   {
-    SpiState.Buff[SpiState.rxBuffIdx++] = SpiaRegs.SPIRXBUF & SPI_CHAR_BITS_MASK;
+    Buff[rxBuffIdx++] = SpiaRegs.SPIRXBUF & SPI_CHAR_BITS_MASK;
   }
 
-  return SpiState.rxBuffIdx;
+  return rxBuffIdx;
 }
 
 //-------------------------------------------------------------------------------------------------
