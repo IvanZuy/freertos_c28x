@@ -13,6 +13,14 @@
 /* Definitions of physical drive number for each drive */
 #define DEV_MMC		0	/* Example: Map MMC/SD card to physical drive 1 */
 
+#define SECTOR_SIZE       512
+#define READ_BUFF_SECTORS 8
+#define BUFF_INVALID      -1
+
+#pragma DATA_SECTION(readBuff, "ramgs2");
+uint8_t readBuff[READ_BUFF_SECTORS * SECTOR_SIZE];
+int32_t readBuffStartSector;
+
 /*-----------------------------------------------------------------------*/
 /* Get Drive Status                                                      */
 /*-----------------------------------------------------------------------*/
@@ -34,6 +42,7 @@ DSTATUS disk_initialize (
 	BYTE pdrv				/* Physical drive nmuber to identify the drive */
 )
 {
+  readBuffStartSector = BUFF_INVALID;
   return 0;
 }
 
@@ -50,7 +59,15 @@ DRESULT disk_read (
 	UINT count		/* Number of sectors to read */
 )
 {
-  sd_read_block(sector, (Uint16*)buff);
+  if(  (readBuffStartSector == BUFF_INVALID)
+     ||(sector < readBuffStartSector)
+     ||(sector >= (readBuffStartSector + READ_BUFF_SECTORS)))
+  {
+    sd_read_multiple_block(sector, (Uint16*)readBuff, READ_BUFF_SECTORS);
+    readBuffStartSector = sector;
+  }
+  memcpy(buff, readBuff + ((sector - readBuffStartSector) * SECTOR_SIZE), SECTOR_SIZE);
+
   return RES_OK;
 }
 

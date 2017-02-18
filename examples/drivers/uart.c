@@ -56,8 +56,16 @@ void UART_open(void)
 //  SciaRegs.SCILBAUD.all = 0x008B;
 
   // SCIA at 115200 baud
-  SciaRegs.SCIHBAUD.all = 0x0000;
-  SciaRegs.SCILBAUD.all = 0x0036;
+  if(ClkCfgRegs.LOSPCP.all == 0)
+  {
+    SciaRegs.SCIHBAUD.all = 0x0000;
+    SciaRegs.SCILBAUD.all = 0x00D9;
+  }
+  else
+  {
+    SciaRegs.SCIHBAUD.all = 0x0000;
+    SciaRegs.SCILBAUD.all = 0x0036;
+  }
 
   SciaRegs.SCICTL1.all = 0x0023;  // Relinquish SCI from Reset
 

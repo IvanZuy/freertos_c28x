@@ -99,6 +99,8 @@ SECTIONS
 
    ramgs0           : > RAMGS0,    PAGE = 1
    ramgs1           : > RAMGS1,    PAGE = 1
+   ramgs2           : > RAMGS2,    PAGE = 1
+   ramgs3           : > RAMGS3,    PAGE = 1
 
    /* The following section definitions are for SDFM examples */
    Filter1_RegsFile : > RAMGS1,	PAGE = 1, fill=0x1111
