@@ -186,7 +186,7 @@ void sd_version2_initialization()
     Uint16 i, send_if_cond_response[4], ccs_check;
     
     //Receive SEND_IF_COND response
-    for(i=0;i<3;i++)
+    for(i=0;i<4;i++)
         send_if_cond_response[i] = spi_xmit_byte(DUMMY_DATA);
 
     //If voltage accepted or check pattern does not match, do not communicate further

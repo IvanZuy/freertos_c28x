@@ -6,7 +6,9 @@
 /* This is an example of glue functions to attach various exsisting      */
 /* storage control modules to the FatFs module with a defined API.       */
 /*-----------------------------------------------------------------------*/
-
+#include <stdio.h>
+#include <string.h>
+#include "uart.h"
 #include "diskio.h"		/* FatFs lower layer API */
 #include "SD.h"
 
@@ -76,7 +78,6 @@ DRESULT disk_read (
 /*-----------------------------------------------------------------------*/
 /* Write Sector(s)                                                       */
 /*-----------------------------------------------------------------------*/
-
 DRESULT disk_write (
 	BYTE pdrv,			/* Physical drive nmuber to identify the drive */
 	const BYTE *buff,	/* Data to be written */
@@ -84,6 +85,11 @@ DRESULT disk_write (
 	UINT count			/* Number of sectors to write */
 )
 {
+  sd_write_block(sector, (Uint16*)buff);
+  if((sector >= readBuffStartSector) && (sector < (readBuffStartSector + READ_BUFF_SECTORS)))
+  {
+    memcpy(readBuff + ((sector - readBuffStartSector) * SECTOR_SIZE), buff, SECTOR_SIZE);
+  }
   return RES_OK;
 }
 

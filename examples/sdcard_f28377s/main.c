@@ -10,7 +10,8 @@
 #include "ff.h"
 #include "diskio.h"
 
-#define STACK_SIZE       1024U
+#define STACK_SIZE       256U
+#define STACK_SIZE_BLUE  2048U
 #define STACK_SIZE_IDLE  256U
 #define RED              0xDEADBEAF
 #define BLUE             0xBAADF00D
@@ -20,7 +21,7 @@ static StaticTask_t redTaskBuffer;
 static StackType_t  redTaskStack[STACK_SIZE];
 
 static StaticTask_t blueTaskBuffer;
-static StackType_t  blueTaskStack[STACK_SIZE];
+static StackType_t  blueTaskStack[STACK_SIZE_BLUE];
 
 static StaticTask_t idleTaskBuffer;
 static StackType_t  idleTaskStack[STACK_SIZE_IDLE];
@@ -33,11 +34,9 @@ FIL      fil;
 uint16_t buff[512];
 
 //-------------------------------------------------------------------------------------------------
-void int2str(uint32_t value, char* str, uint16_t strSize)
+DWORD get_fattime (void)
 {
-
-
-
+  return 0;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -115,7 +114,7 @@ void LED_TaskBlue(void * pvParameters)
 {
 	FRESULT    fresult;
 	uint32_t   br;
-	uint32_t   totalBytesRead;
+	uint32_t   totalBytesProcessed;
 	TickType_t timeElapsed;
 
 	sd_card_insertion();
@@ -136,28 +135,52 @@ void LED_TaskBlue(void * pvParameters)
 
     if(fresult == FR_OK)
     {
-      fresult = f_open(&fil, "test1.bin", FA_READ);
+      // File read benchmark
+//      fresult = f_open(&fil, "test1.bin", FA_READ);
+//      if(fresult == FR_OK)
+//      {
+//        totalBytesProcessed = 0;
+//        timeElapsed = xTaskGetTickCount();
+//        do
+//        {
+//          fresult = f_read(&fil, buff, sizeof(buff), &br);
+//          totalBytesProcessed += br;
+//        }while((fresult == FR_OK) && (br == sizeof(buff)));
+//
+//        timeElapsed = xTaskGetTickCount() - timeElapsed;
+//        snprintf((char*)buff, sizeof(buff),
+//                 "BR: %lu in %lu mS, %lu Kb/sec\n\r",
+//                 totalBytesProcessed,
+//                 timeElapsed,
+//                 totalBytesProcessed/timeElapsed);
+//        UART_send(buff, strlen(buff));
+//        f_close(&fil);
+//      }
+//
+//      vTaskDelay(500 / portTICK_PERIOD_MS);
+
+      // File write benchmark
+      fresult = f_open(&fil, "test2.bin", FA_WRITE | FA_CREATE_ALWAYS);
       if(fresult == FR_OK)
       {
-        totalBytesRead = 0;
+        totalBytesProcessed = 0;
         timeElapsed = xTaskGetTickCount();
-
         do
         {
-          fresult = f_read(&fil, buff, sizeof(buff), &br);
-          totalBytesRead += br;
-        }while((fresult == FR_OK) && (br == sizeof(buff)));
+          fresult = f_write(&fil, buff, sizeof(buff), &br);
+          totalBytesProcessed += br;
+        }while((fresult == FR_OK) && (totalBytesProcessed < 1500000));
 
         timeElapsed = xTaskGetTickCount() - timeElapsed;
         snprintf((char*)buff, sizeof(buff),
-                 "BR: %lu in %lu mS, %lu Kb/sec\n\r",
-                 totalBytesRead,
+                 "BW: %lu in %lu mS, %lu Kb/sec\n\r",
+                 totalBytesProcessed,
                  timeElapsed,
-                 totalBytesRead/timeElapsed);
+                 (timeElapsed != 0) ? (totalBytesProcessed/timeElapsed) : 0);
         UART_send(buff, strlen(buff));
-
         f_close(&fil);
       }
+
       f_mount(NULL, "", 1);
     }
 
@@ -238,7 +261,7 @@ void main(void)
 
     xTaskCreateStatic(LED_TaskBlue,         // Function that implements the task.
                       "Blue LED task",      // Text name for the task.
-                      STACK_SIZE,           // Number of indexes in the xStack array.
+                      STACK_SIZE_BLUE,      // Number of indexes in the xStack array.
                       ( void * ) BLUE,      // Parameter passed into the task.
                       tskIDLE_PRIORITY + 1, // Priority at which the task is created.
                       blueTaskStack,        // Array to use as the task's stack.

@@ -135,6 +135,11 @@ uint16_t SPI_send(uint8_t* buff, uint16_t buffSize, TickType_t timeout)
     }
   }
 
+  // Wait untill TX FIFO is empty and reset RX FIFO.
+  while(SpiaRegs.SPIFFTX.bit.TXFFST != 0);
+  SpiaRegs.SPIFFRX.bit.RXFIFORESET = 0;
+  SpiaRegs.SPIFFRX.bit.RXFIFORESET = 1;
+
   return txBuffIdx;
 }
 

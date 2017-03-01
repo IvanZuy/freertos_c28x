@@ -141,7 +141,7 @@ void sd_write_multiple_block(Uint16 sector, Uint16 *pBuffer, Uint16 total_sector
 //############################# SD_WRITE_DATA ################################
 void sd_write_data(Uint16 *pBuffer, Uint16 total_sectors, Uint16 multiple_write)
 {
-	Uint16 i, j;
+	Uint16 i;
 
 	RESET_RESPONSE;					//Reset response
 
@@ -156,8 +156,10 @@ void sd_write_data(Uint16 *pBuffer, Uint16 total_sectors, Uint16 multiple_write)
 			spi_xmit_byte(START_BLOCK);	
 
 		//Write block of data 
-		for(j=0;j<512;j++)
-			spi_xmit_byte(*pBuffer++);
+//		for(j=0;j<512;j++)
+//			spi_xmit_byte(*pBuffer++);
+		SPI_send(pBuffer, 512, 0);
+		pBuffer += 512;
 
 		//Transmit 0xFF 2 more times to send CRC. In SPI Mode CRC is disable by default
 		//so application does not need to store it. 
