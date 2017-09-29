@@ -114,14 +114,15 @@ void LED_TaskRed(void * pvParameters)
 //-------------------------------------------------------------------------------------------------
 void LED_TaskBlue(void * pvParameters)
 {
+    PWM_setFrequency(PWM_FREQ_300K);
     for(;;)
     {
         ledToggle((uint32_t)pvParameters);
-        PWM_setFrequency(PWM_FREQ_300K);
+        PWM_setPahse(5.5);
         vTaskDelay(250 / portTICK_PERIOD_MS);
 
         ledToggle((uint32_t)pvParameters);
-        PWM_setFrequency(PWM_FREQ_200K);
+        PWM_setPahse(3.14);
         vTaskDelay(250 / portTICK_PERIOD_MS);
     }
 }
