@@ -58,7 +58,7 @@ _portRESTORE_FIRST_CONTEXT
 
 _portTICK_ISR:
 ; Save context
-  ASP          
+  ASP
   PUSH    RB
   PUSH    AR1H:AR0H
   PUSH    RPC
@@ -88,6 +88,7 @@ _portTICK_ISR:
 ; Save stack pointer in the task control block.
   MOVL    XAR0, #_pxCurrentTCB
   MOVL    XAR0, *XAR0
+  MOVL    XAR6, #0     ;set to 0 XAR6 before move the new value of pxTopOfStack
   MOV     AR6, @SP
   MOVL    *XAR0, XAR6
 
@@ -176,7 +177,7 @@ RESTORE_CONTEXT:
   POP     RPC
   POP     AR1H:AR0H
   POP     RB
-  NASP 
+  NASP
   IRET
 
   .else
@@ -220,6 +221,7 @@ _portTICK_ISR:
 ; Save stack pointer in the task control block.
   MOVL    XAR0, #_pxCurrentTCB
   MOVL    XAR0, *XAR0
+  MOVL    XAR6, #0     ;set to 0 XAR6 before move the new value of pxTopOfStack
   MOV     AR6, @SP
   MOVL    *XAR0, XAR6
 
