@@ -120,6 +120,12 @@ void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackTy
 }
 
 //-------------------------------------------------------------------------------------------------
+void vApplicationStackOverflowHook(TaskHandle_t xTask, signed char *pcTaskName)
+{
+    while(1);
+}
+
+//-------------------------------------------------------------------------------------------------
 void main(void)
 {
     // Step 1. Initialize System Control:
