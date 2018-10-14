@@ -13,5 +13,4 @@ This project contains FreeRTOS, port and simple examples for TMS320F28377S and T
 Examples needs TI's controlSUITE to be installed for both MCU and project settings
 should be adjusted to let compiler find device support files.
 
-This project is distributed under "FreeRTOS Open Source License". 
-Full license text is available on the following link: http://www.freertos.org/a00114.html
+This project is distributed under MIT open source license.
